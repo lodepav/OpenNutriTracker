@@ -75,8 +75,8 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
       "Scan it in OpenBite with + › Scan, or a meal's menu › Import shared "
           'meal.',
     SharedPayloadKind.activity =>
-      'Scan it in OpenBite with + › Scan, or the Activity menu › Import '
-          'shared workout.',
+      'Scan it in OpenBite with + › Scan, or the Activity menu › Import'
+          ' workout.',
     SharedPayloadKind.recipe =>
       'Scan it in OpenBite with Recipes › Import recipe, or + › Scan.',
     null => null,
@@ -87,7 +87,7 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
   String get _qrLabel {
     final (name, where) = switch (classifySharedPayload(widget.code)) {
       SharedPayloadKind.meal => ('this meal', 'Import shared meal'),
-      SharedPayloadKind.activity => ('this workout', 'Import shared workout'),
+      SharedPayloadKind.activity => ('this workout', 'Import workout'),
       SharedPayloadKind.recipe => (
         SharedRecipePayload.fromJsonString(widget.code).name,
         'Import recipe',

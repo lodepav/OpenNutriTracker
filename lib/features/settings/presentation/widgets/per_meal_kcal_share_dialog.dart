@@ -194,7 +194,13 @@ class _PerMealKcalShareDialogState extends State<PerMealKcalShareDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    s.settingsPerMealKcalShareDescription,
+                    // [fork] S585 meal-share-words: the row says Snack, and
+                    // moving one share silently moved the other three
+                    // s.settingsPerMealKcalShareDescription,
+                    'Split your daily kcal goal across breakfast, lunch, '
+                    'dinner and snack. Moving one share moves the other '
+                    'three, so they add up to 100%.',
+                    // [/fork]
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 12),

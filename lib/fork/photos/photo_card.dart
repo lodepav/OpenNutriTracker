@@ -99,10 +99,27 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
   Future<void> _add() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      showDragHandle: true,
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Dimens.spacing24,
+                0,
+                Dimens.spacing24,
+                Dimens.spacing8,
+              ),
+              child: Semantics(
+                header: true,
+                child: Text(
+                  'Add a progress photo',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ),
             ListTile(
               key: const ValueKey('photo-camera'),
               leading: const Icon(Icons.photo_camera_outlined),
@@ -154,20 +171,27 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
         // Decoded no wider than the screen: a full 12 MP photo is about
         // 48 MB. The dialog sizes to its content, which a LayoutBuilder
         // can't report, so the screen's width bounds it.
-        content: Image.file(
-          shown.file,
-          semanticLabel: _photoName(context, shown.photo.date),
-          cacheWidth: switch ((MediaQuery.sizeOf(context).width *
-                  MediaQuery.devicePixelRatioOf(context))
-              .round()) {
-            > 0 && final width => width,
-            _ => null,
-          },
-          fit: BoxFit.contain,
+        // Pinch to zoom: the dialog is small for a body photo.
+        content: InteractiveViewer(
+          maxScale: 4,
+          child: Image.file(
+            shown.file,
+            semanticLabel: _photoName(context, shown.photo.date),
+            cacheWidth: switch ((MediaQuery.sizeOf(context).width *
+                    MediaQuery.devicePixelRatioOf(context))
+                .round()) {
+              > 0 && final width => width,
+              _ => null,
+            },
+            fit: BoxFit.contain,
+          ),
         ),
         actions: [
           TextButton(
             key: const ValueKey('photo-delete'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete'),
           ),
@@ -200,7 +224,15 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
         ],
       ),
     );
-    if (sure == true) await _store.remove(shown.photo.id);
+    if (sure != true || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await _store.remove(shown.photo.id);
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text("Couldn't delete the photo. Try again.")),
+      );
+    }
   }
 
   @override
@@ -306,7 +338,15 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                                 width: _thumbWidth,
                                 height: 128,
                                 fit: BoxFit.cover,
-                                cacheWidth: 192,
+                                // At the tile's pixels: 192 wide blurred it
+                                // on a dense screen. Height, as body photos
+                                // are portrait and the tile covers.
+                                cacheHeight:
+                                    (128 *
+                                            MediaQuery.devicePixelRatioOf(
+                                              context,
+                                            ))
+                                        .round(),
                                 errorBuilder: (_, _, _) => const SizedBox(
                                   width: _thumbWidth,
                                   height: 128,
@@ -332,6 +372,9 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
     );
   }
 }
+
+/// Under this page height (a phone in landscape) Compare photos scrolls.
+const _scrollBelowHeight = 480.0;
 
 /// Two progress photos side by side, each picked by date; the oldest and
 /// the newest to start. With a model set up, "Ask AI" judges how body
@@ -513,56 +556,78 @@ class _ComparePhotosScreenState extends State<ComparePhotosScreen> {
         actions: [if (!aiBelow) ?ai],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(Dimens.spacing8),
-              child: Wrap(
-                alignment: WrapAlignment.center,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: Dimens.spacing8,
-                children: [Text('$days days apart'), if (aiBelow) ?ai],
-              ),
-            ),
-            if (_busy)
-              const LinearProgressIndicator(
-                semanticsLabel: 'Comparing the photos',
-              ),
-            if (stacked)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  Dimens.spacing16,
-                  0,
-                  Dimens.spacing16,
-                  Dimens.spacing8,
-                ),
-                child: Column(
-                  children: [
-                    left,
-                    const SizedBox(height: Dimens.spacing8),
-                    right,
-                  ],
-                ),
-              ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Dimens.spacing16,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _side(_left, stacked ? null : left),
-                    const SizedBox(width: Dimens.spacing12),
-                    _side(_right, stacked ? null : right),
-                  ],
-                ),
-              ),
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, box) =>
+              _body(box, days, ai, aiBelow, stacked, left, right),
         ),
       ),
     );
+  }
+
+  /// Short, as in landscape, the page scrolls and each photo is given the
+  /// page's height; else the photos fill what the pickers leave.
+  Widget _body(
+    BoxConstraints box,
+    int days,
+    Widget? ai,
+    bool aiBelow,
+    bool stacked,
+    Widget left,
+    Widget right,
+  ) {
+    final scrolls = box.maxHeight < _scrollBelowHeight;
+    final photos = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Dimens.spacing16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _side(_left, stacked ? null : left),
+          const SizedBox(width: Dimens.spacing12),
+          _side(_right, stacked ? null : right),
+        ],
+      ),
+    );
+    final column = Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(Dimens.spacing8),
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: Dimens.spacing8,
+            children: [Text('$days days apart'), if (aiBelow) ?ai],
+          ),
+        ),
+        if (_busy)
+          const LinearProgressIndicator(semanticsLabel: 'Comparing the photos'),
+        if (stacked)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Dimens.spacing16,
+              0,
+              Dimens.spacing16,
+              Dimens.spacing8,
+            ),
+            child: Column(
+              children: [
+                left,
+                const SizedBox(height: Dimens.spacing8),
+                right,
+              ],
+            ),
+          ),
+        if (scrolls)
+          SizedBox(height: box.maxHeight, child: photos)
+        else
+          Expanded(child: photos),
+      ],
+    );
+    return scrolls
+        ? SingleChildScrollView(
+            key: const ValueKey('compare-scroll'),
+            child: column,
+          )
+        : column;
   }
 
   /// Whether the longest date overflows a half-width picker at the user's

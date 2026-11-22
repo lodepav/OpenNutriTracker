@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
 import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
@@ -9,6 +10,8 @@ import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/app_theme_entity.dart';
 import 'package:opennutritracker/core/domain/entity/config_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
+import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/core/domain/entity/profile_entity.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/add_tracked_day_usecase.dart';
@@ -121,6 +124,14 @@ class _FailingCopy extends Fake implements SendIntakeToProfilesUsecase {
   }
 }
 
+class _Copy extends Fake implements SendIntakeToProfilesUsecase {
+  @override
+  Future<void> copyToProfiles(
+    List<IntakeEntity> intakes,
+    List<ProfileEntity> targets,
+  ) async {}
+}
+
 void main() {
   final getIt = GetIt.instance;
   tearDown(() => getIt.reset());
@@ -215,5 +226,58 @@ void main() {
     await tester.tap(confirm);
     await tester.pumpAndSettle();
     expect(copy.calls, 2);
+  });
+
+  // G3-7: the sheet says what is copied and to which day, and the snackbar
+  // names the profile
+  testWidgets('Copy to profile names the meal, the day and the profile', (
+    tester,
+  ) async {
+    await initializeDateFormatting('en');
+    getIt
+      ..registerSingleton<GetProfilesUsecase>(_Profiles())
+      ..registerSingleton<SendIntakeToProfilesUsecase>(_Copy());
+    final intake = IntakeEntity(
+      id: 'i',
+      unit: 'g',
+      amount: 100,
+      type: IntakeTypeEntity.breakfast,
+      meal: MealEntity(
+        code: 'oats',
+        name: 'Oats',
+        url: null,
+        mealQuantity: null,
+        mealUnit: 'g',
+        servingQuantity: null,
+        servingUnit: null,
+        servingSize: null,
+        nutriments: MealNutrimentsEntity.empty(),
+        source: MealSourceEntity.custom,
+      ),
+      dateTime: DateTime(2026, 11, 21, 8),
+    );
+    await pump(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => showCopyToProfileSheet(context, [intake]),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Breakfast of Sat, Nov 21, to the same day'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Sam'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsIdentifier('copy-to-profile-confirm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Copied to Sam'), findsOneWidget);
   });
 }

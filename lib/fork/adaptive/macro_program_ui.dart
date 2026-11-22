@@ -75,7 +75,8 @@ class _MacroProgramDialogState extends State<MacroProgramDialog> {
               key: const ValueKey('macro-program-grams'),
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                'Today: ${macroGramsText(grams)}',
+                // A number keeps its "g": it wrapped alone at 1.0 (G4-12).
+                'Today: ${macroGramsText(grams).replaceAll(' g', '\u00A0g')}',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             );
@@ -161,9 +162,11 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           contentPadding: EdgeInsets.zero,
           title: Text('Protein and fat per $per'),
           subtitle: const Text(
-            'In place of the percentages. Protein holds steady. Fat is '
-            'set for maintenance and moves with a cut or a bulk; carbs '
-            'take the rest and a weekday\'s shift.',
+            'Sets protein and fat in grams for your body weight, in place '
+            'of the percentages. Protein stays the same. Fat is set for '
+            'maintenance and moves with a cut or a bulk. Carbs fill the '
+            'rest of your calories, so they change most on a day with a '
+            'higher or lower goal.',
           ),
           value: _on,
           onChanged: (v) => setState(() => _on = v),

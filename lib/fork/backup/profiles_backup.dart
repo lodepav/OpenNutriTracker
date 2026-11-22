@@ -319,6 +319,7 @@ class ProfilesBackup {
     ownPortions: () => OwnPortions(
       () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     ),
+    adaptiveBox: () => open<dynamic>(AdaptiveStore.boxName, profile.boxSuffix),
     user: UserDataSource(scope),
   );
 

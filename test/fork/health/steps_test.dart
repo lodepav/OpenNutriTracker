@@ -221,6 +221,26 @@ void main() {
       expect(find.text('1 of 2'), findsOneWidget);
     });
 
+    // G5-7: seven bars with no dates and no key for their colours.
+    testWidgets('the chart says its span and what its colours mean', (
+      tester,
+    ) async {
+      final steps = _MemorySteps(
+        _Source(),
+        days: {DateTime(2026, 10, 22): 9000, DateTime(2026, 10, 23): 3000},
+      );
+      await pump(tester, steps);
+      await tester.tap(find.byKey(const ValueKey('steps-on')));
+      await tester.pumpAndSettle();
+      final dates = find.byKey(const ValueKey('steps-chart-dates'));
+      expect(
+        find.descendant(of: dates, matching: find.text('Oct 17')),
+        findsOneWidget,
+      );
+      expect(find.text('At the goal'), findsOneWidget);
+      expect(find.text('Under it'), findsOneWidget);
+    });
+
     testWidgets('a refused permission stays off and says why', (tester) async {
       final steps = _MemorySteps(_Source()..granted = false);
       await pump(tester, steps);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart'; // [fork] S549
 import 'package:opennutritracker/core/utils/calc/calorie_goal_calc.dart'; // [fork] S89
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:introduction_screen/introduction_screen.dart';
@@ -36,6 +37,7 @@ import 'package:opennutritracker/fork/onboarding/onboarding_back.dart'; // [fork
 import 'package:opennutritracker/fork/onboarding/overview_grams.dart'; // [fork] S333
 import 'package:opennutritracker/fork/onboarding/start_failure.dart'; // [fork] S466
 import 'package:opennutritracker/fork/onboarding/welcome_title.dart'; // [fork] S464
+import 'package:opennutritracker/fork/onboarding/content_width.dart'; // [fork] S542
 
 /// The onboarding pages, in the order they are shown.
 ///
@@ -67,6 +69,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     safeArea: 0,
     bodyAlignment: Alignment.topCenter,
     bodyFlex: 6,
+    // [fork] S546 footer-height: the footer is as tall as its button; a
+    // flex held a seventh of the page for it
+    footerFlex: 0,
+    // [/fork]
   );
 
   final _defaultImageWidget = null;
@@ -99,6 +105,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // [fork] S466 start-busy: set while Start saves, so a second tap does not
   // save again and push the main route twice
   bool _forkStarting = false;
+  // [/fork]
+
+  // [fork] S543 intro-busy-start: the demo seeds or a backup restores
+  bool _forkIntroBusy = false;
   // [/fork]
 
   @override
@@ -210,7 +220,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _getLoadedContent(BuildContext context) {
-    return IntroductionScreen(
+    // [fork] S542 content-width: centred at 600 dp on a wide screen
+    // return IntroductionScreen(
+    return ContentWidth(child: IntroductionScreen(
+    // [/fork]
       key: _introKey,
       scrollPhysics: const NeverScrollableScrollPhysics(),
       back: const Icon(Icons.arrow_back_outlined),
@@ -237,7 +250,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       progressSemantic: (current, total) =>
           S.of(context).onboardingPageProgressSemantic(current, total),
       pages: _getPageViewModels(),
-    );
+    // [fork] S542 content-width
+    // );
+    ));
+    // [/fork]
   }
 
   /// Builds the pages in [_OnboardingPage] order. The two have to stay in
@@ -259,12 +275,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setPageContent: _setIntroPageData,
           initialAcceptedPolicy: _introPageButtonActive,
           initialAcceptedDataCollection: selection.acceptDataCollection,
+          // [fork] S543 intro-busy-start
+          onBusy: (busy) => setState(() => _forkIntroBusy = busy),
+          // [/fork]
         ),
         footer: HighlightButton(
           buttonLabel: S.of(context).buttonStartLabel,
           onButtonPressed: () => _scrollToPage(_OnboardingPage.aboutYou),
-          buttonActive: _introPageButtonActive,
-          inactiveMessage: S.of(context).onboardingBlockedPolicySnack,
+          // [fork] S543 intro-busy-start: Start waits for the demo or restore
+          buttonActive: _introPageButtonActive && !_forkIntroBusy,
+          inactiveMessage: _forkIntroBusy
+              ? 'Wait until it has loaded.'
+              : S.of(context).onboardingBlockedPolicySnack,
+          // buttonActive: _introPageButtonActive,
+          // inactiveMessage: S.of(context).onboardingBlockedPolicySnack,
+          // [/fork]
         ),
       ),
       PageViewModel(
@@ -454,7 +479,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _scrollToPage(_OnboardingPage page) {
-    FocusScope.of(context).requestFocus(FocusNode()); // Dismiss Keyboard
+    // [fork] S546 page-focus: a new FocusNode per page change was never
+    // disposed
+    // FocusScope.of(context).requestFocus(FocusNode()); // Dismiss Keyboard
+    FocusScope.of(context).unfocus(); // Dismiss Keyboard
+    // [/fork]
     _introKey.currentState?.animateScroll(page.index);
   }
 
@@ -541,6 +570,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void onPageChanged(int page) {
     _forkPage = page; // [fork] S332: for system Back
+    // [fork] S549 page-announce: TalkBack hears which page it is on
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      S
+          .of(context)
+          .onboardingPageProgressSemantic(
+            page + 1,
+            _OnboardingPage.values.length,
+          ),
+      Directionality.of(context),
+    );
+    // [/fork]
     checkUserDataProvided();
   }
 

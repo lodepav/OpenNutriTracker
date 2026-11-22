@@ -36,9 +36,15 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/core/utils/user_image_storage.dart';
 import 'package:opennutritracker/core/utils/url_const.dart';
 import 'package:opennutritracker/features/fasting/data/repository/fasting_repository.dart';
+// [fork] S599 demo-food-modes
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
+// [/fork]
 import 'package:opennutritracker/features/fasting/domain/entity/fasting_session_entity.dart';
 import 'package:opennutritracker/features/fasting/domain/usecase/acknowledge_fasting_warning_usecase.dart';
 import 'package:path_provider/path_provider.dart';
+// [fork] S563 demo-per-profile
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
+// [/fork]
 
 final _log = Logger('DemoSeeder');
 
@@ -297,6 +303,10 @@ Future<void> seedDemoData(DemoSeedOptions options) async {
   await addConfig.setConfigPolicyNoticeRevisionSeen(URLConst.policyRevision);
   await addConfig.setConfigHasAcceptedAnonymousData(false);
   await addConfig.setConfigIsDemoData(true);
+  // [fork] S563 demo-per-profile: the demo is this profile's, so a second
+  // profile neither ends it here nor shows it there (H1)
+  await markDemoProfile(true);
+  // [/fork]
 
   _log.info('Demo data seeded.');
 }
@@ -310,7 +320,17 @@ Future<void> seedDemoData(DemoSeedOptions options) async {
 Future<void> _wipeActiveProfileAndDemoContent() async {
   await locator<DeleteAllUserDataUsecase>().deleteAll();
   final hiveDBProvider = locator<HiveDBProvider>();
+  // [fork] S563 demo-per-profile: with another profile the libraries are
+  // its too, so leaving the demo keeps them (H3, H5)
+  // shortcut: the demo's own recipes, foods and template stay then; mark
+  // them at seeding to remove only those if it is raised.
+  if (locator<GetProfilesUsecase>().getProfiles().length > 1) return;
+  // [/fork]
   await hiveDBProvider.customMealBox.clear();
+  // [fork] S599 demo-food-modes: the per-serving marks go with the foods,
+  // so a later food of the same name starts per 100 g
+  await CustomFoodModes().clear();
+  // [/fork]
   await hiveDBProvider.recipeBox.clear();
   await hiveDBProvider.customActivityTemplateBox.clear();
 }
@@ -331,6 +351,10 @@ Future<void> exitDemoMode() async {
   final active = locator<GetProfilesUsecase>().getActiveProfile();
 
   await _wipeActiveProfileAndDemoContent();
+  // [fork] S563 demo-per-profile: the profile is no longer the demo
+  await markDemoProfile(false);
+  await syncDemoFlag();
+  // [/fork]
 
   if (active == null) return;
   if (active.imagePath != null) {

@@ -154,6 +154,11 @@ void main() {
     expect(recipeEmoji(named('Greek yogurt parfait')), yogurt);
     // The water weighs more and comes first; the banana is the dish.
     expect(recipeEmoji(named('Sunday mix')), resolveFoodEmoji('Banana'));
+    // G3-12: "protein" in a dish's name is not a supplement's DNA helix
+    expect(
+      recipeEmoji(named('Protein Power Bowl')),
+      resolveFoodEmoji('Banana'),
+    );
   });
 
   group('the row', () {

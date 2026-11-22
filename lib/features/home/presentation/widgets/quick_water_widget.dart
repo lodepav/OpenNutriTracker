@@ -83,7 +83,14 @@ class QuickWaterWidget extends StatelessWidget {
   Future<void> _showDialog(BuildContext context) async {
     await showDialog<void>(
       context: context,
-      builder: (_) => LogWaterDialog(usesImperialUnits: usesImperialUnits),
+      // [fork] S554 water-today
+      // builder: (_) => LogWaterDialog(usesImperialUnits: usesImperialUnits),
+      builder: (_) => LogWaterDialog(
+        usesImperialUnits: usesImperialUnits,
+        todayMl: waterMlToday,
+        goalMl: waterGoalMl,
+      ),
+      // [/fork]
     );
   }
 }

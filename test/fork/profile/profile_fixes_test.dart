@@ -52,7 +52,13 @@ void main() {
           profiles: [alex],
           activeId: 'alex',
           stats: {
-            'alex': (goal: null, kcalGoal: null, trendKg: null, daysLogged: 1),
+            'alex': (
+              goal: null,
+              kcalGoal: null,
+              trendKg: null,
+              daysLogged: 1,
+              firstDay: null,
+            ),
           },
           weightUnit: BodyWeightUnit.kg,
           onEdit: (_) {},

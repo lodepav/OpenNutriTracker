@@ -22,6 +22,7 @@ import 'package:opennutritracker/features/settings/domain/export_import_failure.
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -45,6 +46,7 @@ void main() {
     // A restore sets the live settings; left, a later file in the same
     // process reads an adaptive target with no Hive behind it.
     AdaptiveStore.settings.value = const AdaptiveSettings();
+    CustomFoodModes.perServing.value = const {};
     await Hive.close();
     await dir.delete(recursive: true);
   });
@@ -62,6 +64,8 @@ void main() {
     OwnPortions ownPortions,
     MealGroupStore mealGroups,
     MealPhotoCache mealPhotos,
+    CustomFoodModes modes,
+    Future<Box<dynamic>> Function() adaptiveBox,
     List<Object> replans,
     _User user,
     _Config config,
@@ -82,6 +86,8 @@ void main() {
       dir: () async => Directory('${dir.path}/meal$name'),
       flags: () => Hive.openBox<bool>('flags$name'),
     );
+    final modes = CustomFoodModes(() => Hive.openBox<dynamic>('modes$name'));
+    Future<Box<dynamic>> adaptiveBox() => Hive.openBox<dynamic>(name);
     final replans = <Object>[];
     final water = _Water();
     final fasting = _Fasting();
@@ -101,6 +107,8 @@ void main() {
         ownPortions: () => ownPortions,
         mealGroups: () => mealGroups,
         mealPhotos: () => mealPhotos,
+        customFoodModes: () => modes,
+        adaptiveBox: adaptiveBox,
         replanReminders: () async => replans.add(true),
         user: user,
         config: config,
@@ -116,6 +124,8 @@ void main() {
       ownPortions: ownPortions,
       mealGroups: mealGroups,
       mealPhotos: mealPhotos,
+      modes: modes,
+      adaptiveBox: adaptiveBox,
       replans: replans,
       user: user,
       config: config,
@@ -332,6 +342,57 @@ void main() {
       2,
       3,
     ]);
+  });
+
+  test('a per-serving custom food stays per serving, a restored per-100 g '
+      'one loses a stale mark, and the demo mark travels', () async {
+    final from = device();
+    final bar = MealDBO.fromMealEntity(MealEntityFixtures.mealOne);
+    final bread = MealDBO.fromMealEntity(MealEntityFixtures.mealTwo);
+    String key(MealDBO m) => m.code ?? m.name ?? '';
+    from.meals.saved.addAll([bar, bread]);
+    await from.modes.record(key(bar), perServing: true);
+    await (await from.adaptiveBox()).put('isDemoProfile', false);
+
+    final archive = Archive();
+    await from.extras.addTo(archive);
+
+    final to = device();
+    // this phone had bread per serving and a food of its own
+    await to.modes.record(key(bread), perServing: true);
+    await to.modes.record('own', perServing: true);
+    await to.extras.prepareRestore(archive)();
+
+    expect(await to.modes.stored(), unorderedEquals([key(bar), 'own']));
+    expect(CustomFoodModes.perServing.value, {key(bar), 'own'});
+    expect((await to.adaptiveBox()).get('isDemoProfile'), isFalse);
+  });
+
+  test('a demo mark that is not true or false is skipped', () async {
+    final from = device();
+    final archive = Archive();
+    await from.extras.addTo(archive);
+    final adaptive =
+        jsonDecode(
+              utf8.decode(
+                archive.findFile(BackupExtras.adaptiveFileName)!.content
+                    as List<int>,
+              ),
+            )
+            as Map<String, dynamic>;
+    // A demo mark never comes back as true: leaving a demo wipes the profile.
+    (adaptive[BackupExtras.keptKey] as Map)['isDemoProfile'] = true;
+    final demoTo = device();
+    await demoTo.extras.prepareRestore(
+      edited(archive, {BackupExtras.adaptiveFileName: jsonEncode(adaptive)}),
+    )();
+    expect((await demoTo.adaptiveBox()).get('isDemoProfile'), isNull);
+    (adaptive[BackupExtras.keptKey] as Map)['isDemoProfile'] = 'yes';
+    final to = device();
+    await to.extras.prepareRestore(
+      edited(archive, {BackupExtras.adaptiveFileName: jsonEncode(adaptive)}),
+    )();
+    expect((await to.adaptiveBox()).get('isDemoProfile'), isNull);
   });
 
   test("the user's own portions travel; a name the other device has takes "

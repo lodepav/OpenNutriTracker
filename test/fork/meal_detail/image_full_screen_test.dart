@@ -74,6 +74,13 @@ void main() {
     );
     expect(IconTheme.of(tester.element(arrow)).color, Colors.white);
     expect(find.bySemanticsLabel('The food photo'), findsOneWidget);
+    // black system bars with light icons, not the light theme's grey scrims
+    // (S556, G2-25)
+    final bars = tester.widget<AppBar>(find.byType(AppBar)).systemOverlayStyle!;
+    expect(bars.statusBarIconBrightness, Brightness.light);
+    expect(bars.systemNavigationBarColor, Colors.black);
+    expect(bars.systemNavigationBarContrastEnforced, isFalse);
+    expect(bars.systemStatusBarContrastEnforced, isFalse);
     semantics.dispose();
   });
 }

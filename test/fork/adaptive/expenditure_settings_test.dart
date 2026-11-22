@@ -1003,6 +1003,29 @@ void main() {
       );
     });
 
+    // G4-12: "follows a lasting change" read as jargon; now what you burn.
+    testWidgets('each choice says in plain words how fast it follows', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ExpenditureSettingsScreen(
+            store: _MemoryStore(),
+            steps: _SwitchSteps(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('lasting change'), findsNothing);
+      expect(
+        find.textContaining('shows in full after about 6 weeks'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Responsive'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('in about 5 weeks'), findsOneWidget);
+    });
+
     testWidgets('choices stack as rows at large text', (tester) async {
       await tester.pumpWidget(
         MaterialApp(

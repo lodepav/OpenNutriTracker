@@ -111,7 +111,7 @@ void main() {
   for (final (kind, code, where) in [
     ('meal', _mealCode, "a meal's menu › Import shared meal"),
     ('recipe', _recipeCode, 'Recipes › Import recipe'),
-    ('workout', _workoutCode, 'the Activity menu › Import shared workout'),
+    ('workout', _workoutCode, 'the Activity menu › Import workout'),
   ]) {
     testWidgets('a $kind code says where to scan it', (tester) async {
       await pump(tester, code());
@@ -133,7 +133,7 @@ void main() {
     (
       'workout',
       _workoutCode,
-      "QR code for this workout, scan it in OpenBite's Import shared workout",
+      "QR code for this workout, scan it in OpenBite's Import workout",
     ),
   ]) {
     testWidgets('a $kind QR image says what it is for', (tester) async {

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/styles/app_palette.dart';
+import 'package:opennutritracker/core/styles/app_theme.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
@@ -108,6 +110,46 @@ void main() {
         ]),
       ),
     );
+  });
+
+  testWidgets('the two add buttons are one height, in the app theme', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(AppPalette.light),
+        home: MealPlanScreen(
+          today: _today,
+          store: _Memory([]),
+          pickFoods: (_, _, _, _) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    double height(String key) =>
+        tester.getSize(find.byKey(ValueKey(key))).height;
+    expect(height('plan-add-recurring'), height('plan-add-foods'));
+  });
+
+  testWidgets('a food with no name has a title, here and in Repeat', (
+    tester,
+  ) async {
+    // mealOne has no name.
+    await pump(
+      tester,
+      _Memory([
+        _food('a', _today),
+        _food('r', _today, weekdays: {DateTime.monday}),
+      ]),
+    );
+    // the day's two planned rows and the recurring row
+    expect(find.text('Unnamed food'), findsNWidgets(3));
+    final row = find.byKey(const ValueKey('plan-recurring-r'));
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    await tester.tap(row);
+    await tester.pumpAndSettle();
+    expect(find.text('Repeat Unnamed food'), findsOneWidget);
   });
 
   testWidgets('says when a day is empty, and shows the day picked', (

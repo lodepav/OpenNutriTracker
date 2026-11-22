@@ -354,7 +354,8 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
                               bands: goals.bands(widget.unit),
                               today: _today,
                               locale: locale,
-                              onDay: (day) => _openDay(context, goals, day),
+                              onDay: (day, date) =>
+                                  _openDay(context, goals, day, date),
                             ),
                           ),
                       ],
@@ -370,6 +371,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
     BuildContext context,
     CalendarGoals goals,
     GoalDay day,
+    DateTime date,
   ) async {
     final plan = goals.plan;
     if (day.current && plan != null) {
@@ -383,6 +385,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
         actions: _actions,
         changed: _load,
         edit: widget.edit ?? _editGoal,
+        tapped: date,
       );
     } else if (day.queued case final i?) {
       await showModalBottomSheet<void>(
@@ -393,6 +396,7 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
         builder: (sheet) => _NextSheet(
           upcoming: goals.upcoming,
           index: i,
+          tapped: date,
           unit: widget.unit,
           onEdit: () => _edit(sheet, i),
           onEarlier: i == 0
@@ -457,6 +461,7 @@ Future<void> showRunningGoal(
   required GoalActions actions,
   required VoidCallback changed,
   EditGoal edit = _editGoal,
+  DateTime? tapped,
 }) => showModalBottomSheet<void>(
   context: context,
   showDragHandle: true,
@@ -468,6 +473,7 @@ Future<void> showRunningGoal(
     unit: unit,
     nowKg: nowKg,
     today: today,
+    tapped: tapped,
     onEdit: () async {
       Navigator.of(sheet).pop();
       if (await edit(context, null)) changed();
@@ -652,7 +658,7 @@ class _Month extends StatelessWidget {
   final List<CalendarBand> bands;
   final DateTime today;
   final String locale;
-  final ValueChanged<GoalDay> onDay;
+  final void Function(GoalDay day, DateTime date) onDay;
 
   const _Month({
     required this.month,
@@ -765,7 +771,7 @@ class _Day extends StatelessWidget {
   final GoalDay? at;
   final DateTime today;
   final String locale;
-  final ValueChanged<GoalDay> onTap;
+  final void Function(GoalDay day, DateTime date) onTap;
 
   const _Day({
     required this.day,
@@ -825,7 +831,7 @@ class _Day extends StatelessWidget {
         ),
       ),
     );
-    final open = tappable ? () => onTap(at) : null;
+    final open = tappable ? () => onTap(at, day) : null;
     // The whole slot, 48 dp tall, takes the tap around the 40 dp chip; the
     // node carries the tap itself, as it excludes the detector's.
     return Semantics(
@@ -898,11 +904,15 @@ class _SheetHead extends StatelessWidget {
   final String title;
   final String detail;
 
+  /// The calendar day the sheet was opened from, named above the goal.
+  final DateTime? tapped;
+
   const _SheetHead({
     required this.kind,
     required this.pill,
     required this.title,
     required this.detail,
+    this.tapped,
   });
 
   @override
@@ -913,6 +923,14 @@ class _SheetHead extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (tapped case final day?) ...[
+            Text(
+              '${intl.DateFormat.MMMEd(Localizations.localeOf(context).toLanguageTag()).format(day)} is in this goal',
+              key: const ValueKey('goal-sheet-tapped-day'),
+              style: theme.textTheme.labelLarge,
+            ),
+            const SizedBox(height: 8),
+          ],
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -965,6 +983,7 @@ class _NowSheet extends StatelessWidget {
   final BodyWeightUnit unit;
   final double? nowKg;
   final DateTime today;
+  final DateTime? tapped;
   final VoidCallback onEdit;
   final VoidCallback onComplete;
   final VoidCallback onRemove;
@@ -975,6 +994,7 @@ class _NowSheet extends StatelessWidget {
     required this.unit,
     required this.nowKg,
     required this.today,
+    this.tapped,
     required this.onEdit,
     required this.onComplete,
     required this.onRemove,
@@ -995,6 +1015,7 @@ class _NowSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SheetHead(
+              tapped: tapped,
               kind: plan.kind,
               pill: '${plan.kind.label} · now',
               title: goalTitle(plan, unit),
@@ -1050,6 +1071,7 @@ String _rate(double kgPerWeek, BodyWeightUnit unit) {
 class _NextSheet extends StatelessWidget {
   final List<PhasePlan> upcoming;
   final int index;
+  final DateTime? tapped;
   final BodyWeightUnit unit;
   final VoidCallback onEdit;
   final VoidCallback? onEarlier;
@@ -1059,6 +1081,7 @@ class _NextSheet extends StatelessWidget {
   const _NextSheet({
     required this.upcoming,
     required this.index,
+    this.tapped,
     required this.unit,
     required this.onEdit,
     required this.onEarlier,
@@ -1084,6 +1107,7 @@ class _NextSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _SheetHead(
+              tapped: tapped,
               kind: plan.kind,
               pill: '${plan.kind.label} · up next, ${_ordinal(index + 1)}',
               title: goalTitle(plan, unit),

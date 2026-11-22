@@ -296,13 +296,14 @@ class _EstimateSectionState extends State<_EstimateSection> {
         ),
         _Note(switch (settings.responsiveness) {
           Responsiveness.steady =>
-            'Moves least from day to day; follows a lasting change in about '
-                '7 weeks.',
+            'Changes slowly and ignores most day-to-day swings. A real change '
+                'in what you burn shows in full after about 7 weeks.',
           Responsiveness.standard =>
-            'Follows a lasting change in about 6 weeks.',
+            'A real change in what you burn shows in full after about 6 '
+                'weeks.',
           Responsiveness.responsive =>
-            'Follows a lasting change in about 5 weeks, and moves more from '
-                'day to day.',
+            'Shows a real change in what you burn in about 5 weeks, but '
+                'swings more from day to day.',
         }),
         // A woman's profile only, or one that has it on, to turn it off.
         FutureBuilder<bool>(

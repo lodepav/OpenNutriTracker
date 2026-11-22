@@ -21,6 +21,8 @@ void main() {
     await tester.tap(find.byKey(const Key('fork-off-account')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Offer to add my foods'));
+    // the account fields are enabled by the switch
+    await tester.pump();
     await tester.enterText(find.byKey(const Key('fork-off-user')), ' me ');
     await tester.enterText(find.byKey(const Key('fork-off-password')), 'pw');
     await tester.tap(find.byKey(const Key('fork-off-save')));

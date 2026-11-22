@@ -36,10 +36,31 @@ void main() {
   ) async {
     await pumpPage(tester);
 
-    expect(find.text(l10nEn.palSedentaryDescriptionLabel), findsOneWidget);
-    expect(find.text(l10nEn.palLowActiveDescriptionLabel), findsOneWidget);
-    expect(find.text(l10nEn.palActiveDescriptionLabel), findsOneWidget);
-    expect(find.text(l10nEn.palVeryActiveDescriptionLabel), findsOneWidget);
+    // [fork] S593 pal-examples: the four examples in one form
+    // expect(find.text(l10nEn.palSedentaryDescriptionLabel), findsOneWidget);
+    // expect(find.text(l10nEn.palLowActiveDescriptionLabel), findsOneWidget);
+    // expect(find.text(l10nEn.palActiveDescriptionLabel), findsOneWidget);
+    // expect(find.text(l10nEn.palVeryActiveDescriptionLabel), findsOneWidget);
+    expect(
+      find.text('Office job, and mostly sitting in free time'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Sitting or standing at work, and light activity in free time'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Mostly standing or walking at work, and active free time'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'Mostly walking, running or carrying weight at work, and active free '
+        'time',
+      ),
+      findsOneWidget,
+    );
+    // [/fork]
   });
 
   testWidgets('nothing is selected until the user picks', (tester) async {
@@ -63,7 +84,10 @@ void main() {
       },
     );
 
-    await tester.tap(find.text(l10nEn.palVeryActiveLabel));
+    // [fork] S592 pal-labels: sentence case
+    // await tester.tap(find.text(l10nEn.palVeryActiveLabel));
+    await tester.tap(find.text('Very active'));
+    // [/fork]
     await tester.pump();
 
     expect(reported, UserActivitySelectionEntity.veryActive);

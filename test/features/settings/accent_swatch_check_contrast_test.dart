@@ -104,15 +104,18 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      // The swatch row is a lazy horizontal list: later presets are only
-      // built once scrolled into view.
-      await tester.scrollUntilVisible(
-        find.byIcon(Icons.check_rounded),
-        100,
-        scrollable: find.byWidgetPredicate(
-          (w) => w is Scrollable && w.axisDirection == AxisDirection.right,
-        ),
-      );
+      // [fork] S548 swatch-wrap: the swatches wrap in rows, all built, so
+      // there is no row to scroll
+      // // The swatch row is a lazy horizontal list: later presets are only
+      // // built once scrolled into view.
+      // await tester.scrollUntilVisible(
+      //   find.byIcon(Icons.check_rounded),
+      //   100,
+      //   scrollable: find.byWidgetPredicate(
+      //     (w) => w is Scrollable && w.axisDirection == AxisDirection.right,
+      //   ),
+      // );
+      // [/fork]
       _expectReadableTick(tester, accent);
       await tester.pumpWidget(const SizedBox());
     }

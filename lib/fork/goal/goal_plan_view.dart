@@ -679,6 +679,37 @@ class PlanGrid extends StatelessWidget {
   }
 }
 
+/// The plan grid's month names from [from] (a Monday) over [weeks]
+/// columns of [cell]: each month over its first Monday, and the first
+/// column's month when it has two weeks or more there. One that would run
+/// into the name before it, [width] wide, is left out; the first column's
+/// partial month gives way to the next month's name (it hid "Nov").
+List<({int week, DateTime month})> gridMonthLabels({
+  required DateTime from,
+  required int weeks,
+  required double cell,
+  required double Function(DateTime month) width,
+}) {
+  final labels = <({int week, DateTime month})>[];
+  var partialFirst = false;
+  for (var w = 0; w < weeks; w++) {
+    final monday = DateTime(from.year, from.month, from.day + w * 7);
+    final first = monday.day <= 7;
+    final partial = w == 0 && !first && monday.day <= 21;
+    if (!first && !partial) continue;
+    final month = DateTime(monday.year, monday.month);
+    final before = labels.lastOrNull;
+    if (before != null &&
+        before.week * cell + width(before.month) + 4 > w * cell) {
+      if (!partialFirst) continue;
+      labels.removeLast();
+    }
+    labels.add((week: w, month: month));
+    partialFirst = partial;
+  }
+  return labels;
+}
+
 class _GridPainter extends CustomPainter {
   final DateTime from;
   final int weeks;
@@ -709,25 +740,20 @@ class _GridPainter extends CustomPainter {
     const top = 16.0;
     final gap = cell > 8 ? 2.0 : 1.0;
     final paint = Paint();
-    var lastMonth = -1;
-    var lastLabelX = -100.0;
+    TextPainter text(DateTime m) => TextPainter(
+      text: TextSpan(text: month(m), style: label),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    for (final l in gridMonthLabels(
+      from: from,
+      weeks: weeks,
+      cell: cell,
+      width: (m) => text(m).width,
+    )) {
+      text(l.month).paint(canvas, Offset(l.week * cell, 0));
+    }
     for (var w = 0; w < weeks; w++) {
-      final monday = DateTime(from.year, from.month, from.day + w * 7);
-      // A month is named over its first whole week.
-      final firstOfMonth = DateTime(monday.year, monday.month, 1);
       final x = w * cell;
-      if (monday.month != lastMonth && monday.day <= 7 ||
-          (w == 0 && monday.day <= 21)) {
-        if (x - lastLabelX > 28) {
-          final text = TextPainter(
-            text: TextSpan(text: month(firstOfMonth), style: label),
-            textDirection: TextDirection.ltr,
-          )..layout();
-          text.paint(canvas, Offset(x, 0));
-          lastLabelX = x;
-        }
-        lastMonth = monday.month;
-      }
       for (var d = 0; d < 7; d++) {
         final i = w * 7 + d;
         final kind = kinds[i];

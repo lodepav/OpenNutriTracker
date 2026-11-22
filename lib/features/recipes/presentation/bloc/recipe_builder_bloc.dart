@@ -252,7 +252,10 @@ class RecipeBuilderBloc
         recipe,
         totalWeightOverridden: state.totalWeightOverridden,
       );
-      emit(state.copyWith(isSaving: false, didSave: true));
+      // [fork] S564 duplicate-saved: the id a new recipe got, for the pop
+      // emit(state.copyWith(isSaving: false, didSave: true));
+      emit(state.copyWith(isSaving: false, didSave: true, id: recipe.id));
+      // [/fork]
     } catch (e) {
       emit(
         state.copyWith(

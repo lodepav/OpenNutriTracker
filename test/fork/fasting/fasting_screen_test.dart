@@ -133,4 +133,50 @@ void main() {
     // The screen's timer stops with it.
     await tester.pumpWidget(const SizedBox());
   });
+
+  testWidgets('End fast asks in the page\'s words, in red, and the fast '
+      'stays in the history', (tester) async {
+    repository.sessions['f'] = FastingSessionEntity(
+      id: 'f',
+      startedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      targetDurationMinutes: 16 * 60,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: const FastingScreen(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.bySemanticsIdentifier('fasting-cancel'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      find.text('The time so far stays in your history as an ended fast.'),
+      findsOneWidget,
+    );
+    final confirm = find.descendant(
+      of: find.bySemanticsIdentifier('fasting-cancel-confirm'),
+      matching: find.byType(Text),
+    );
+    final context = tester.element(confirm);
+    expect(
+      DefaultTextStyle.of(context).style.color,
+      Theme.of(context).colorScheme.error,
+    );
+
+    await tester.tap(confirm);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(repository.sessions['f']!.cancelledAt, isNotNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

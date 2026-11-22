@@ -118,45 +118,48 @@ class _RecipesPageState extends State<RecipesPage>
           ),
         ),
         // [/fork]
-        actions: [
-          PopupMenuButton<_RecipesAction>(
-            tooltip: S.of(context).addLabel,
-            icon: const Icon(Icons.add),
-            onSelected: (action) => _onAddSelected(context, action),
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: _RecipesAction.newRecipe,
-                child: Row(
-                  children: [
-                    const Icon(Icons.menu_book_outlined),
-                    const SizedBox(width: Dimens.spacing12),
-                    Text(S.of(context).createRecipeTitle),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: _RecipesAction.newCustomMeal,
-                child: Row(
-                  children: [
-                    const Icon(Icons.restaurant_outlined),
-                    const SizedBox(width: Dimens.spacing12),
-                    Text(S.of(context).newCustomMealLabel),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: _RecipesAction.importRecipe,
-                child: Row(
-                  children: [
-                    const Icon(Icons.qr_code_scanner_outlined),
-                    const SizedBox(width: Dimens.spacing12),
-                    Text(S.of(context).importRecipeLabel),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
+        // [fork] S562 recipes-tokens: the footer holds the page's actions; a
+        // + menu repeating them goes (H8)
+        // actions: [
+        //   PopupMenuButton<_RecipesAction>(
+        //     tooltip: S.of(context).addLabel,
+        //     icon: const Icon(Icons.add),
+        //     onSelected: (action) => _onAddSelected(context, action),
+        //     itemBuilder: (context) => [
+        //       PopupMenuItem(
+        //         value: _RecipesAction.newRecipe,
+        //         child: Row(
+        //           children: [
+        //             const Icon(Icons.menu_book_outlined),
+        //             const SizedBox(width: Dimens.spacing12),
+        //             Text(S.of(context).createRecipeTitle),
+        //           ],
+        //         ),
+        //       ),
+        //       PopupMenuItem(
+        //         value: _RecipesAction.newCustomMeal,
+        //         child: Row(
+        //           children: [
+        //             const Icon(Icons.restaurant_outlined),
+        //             const SizedBox(width: Dimens.spacing12),
+        //             Text(S.of(context).newCustomMealLabel),
+        //           ],
+        //         ),
+        //       ),
+        //       PopupMenuItem(
+        //         value: _RecipesAction.importRecipe,
+        //         child: Row(
+        //           children: [
+        //             const Icon(Icons.qr_code_scanner_outlined),
+        //             const SizedBox(width: Dimens.spacing12),
+        //             Text(S.of(context).importRecipeLabel),
+        //           ],
+        //         ),
+        //       ),
+        //     ],
+        //   ),
+        // ],
+        // [/fork]
       ),
       body: BlocProvider.value(
         value: _customMealsBloc,
@@ -249,26 +252,21 @@ class _RecipesPageState extends State<RecipesPage>
             Dimens.spacing12,
           ),
           child: _tabController.index == 0
-              ? Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => _onAddSelected(
-                          context,
-                          _RecipesAction.importRecipe,
-                        ),
-                        child: Text(s.importRecipeLabel),
-                      ),
+              // S564: stacked at large text, each label on one line (A6)
+              ? _forkFooterPair(
+                  context,
+                  OutlinedButton(
+                    onPressed: () => _onAddSelected(
+                      context,
+                      _RecipesAction.importRecipe,
                     ),
-                    const SizedBox(width: Dimens.spacing12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: () =>
-                            _onAddSelected(context, _RecipesAction.newRecipe),
-                        child: Text(s.createRecipeTitle),
-                      ),
-                    ),
-                  ],
+                    child: Text(s.importRecipeLabel),
+                  ),
+                  FilledButton(
+                    onPressed: () =>
+                        _onAddSelected(context, _RecipesAction.newRecipe),
+                    child: Text(s.createRecipeTitle),
+                  ),
                 )
               : FilledButton(
                   onPressed: () =>
@@ -277,6 +275,26 @@ class _RecipesPageState extends State<RecipesPage>
                 ),
         ),
       ),
+    );
+  }
+  // [/fork]
+
+  // [fork] S564 recipes-footer-stack: side by side, or one above the other
+  // at large text (A6)
+  Widget _forkFooterPair(BuildContext context, Widget first, Widget second) {
+    if (MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [first, const SizedBox(height: Dimens.spacing8), second],
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: Dimens.spacing12),
+        Expanded(child: second),
+      ],
     );
   }
   // [/fork]
@@ -363,7 +381,12 @@ class _RecipesPageState extends State<RecipesPage>
                     isDense: true,
                     filled: true,
                     fillColor: palette.surfaceMuted,
-                    hintText: S.of(context).searchLabel,
+                    // [fork] S568 recipes-audit-p3: a label, so TalkBack
+                    // names the field (A3)
+                    // hintText: S.of(context).searchLabel,
+                    labelText: 'Search recipes',
+                    floatingLabelBehavior: FloatingLabelBehavior.never,
+                    // [/fork]
                     prefixIcon: Icon(Icons.search_rounded, color: palette.textMuted),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -379,10 +402,17 @@ class _RecipesPageState extends State<RecipesPage>
                       borderRadius: Dimens.borderRadiusM,
                       borderSide: BorderSide.none,
                     ),
+                    // [fork] S568 recipes-audit-p3: the theme's 3:1 field
+                    // edge (S552), not a fill alone (A4)
+                    // enabledBorder: OutlineInputBorder(
+                    //   borderRadius: Dimens.borderRadiusM,
+                    //   borderSide: BorderSide.none,
+                    // ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: Dimens.borderRadiusM,
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(color: palette.textMuted),
                     ),
+                    // [/fork]
                   ),
                 ),
               ),
@@ -640,7 +670,17 @@ class _RecipesPageState extends State<RecipesPage>
                 color: accent.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.menu_book_rounded, size: 56, color: accent),
+              // [fork] S568 recipes-audit-p3: the icon at 3:1 on its tint (A2)
+              // child: Icon(Icons.menu_book_rounded, size: 56, color: accent),
+              child: Icon(
+                Icons.menu_book_rounded,
+                size: 56,
+                color: chartSafe(
+                  accent,
+                  Color.alphaBlend(accent.withValues(alpha: 0.12), palette.canvas),
+                ),
+              ),
+              // [/fork]
             ),
             const SizedBox(height: Dimens.spacing24),
             Text(

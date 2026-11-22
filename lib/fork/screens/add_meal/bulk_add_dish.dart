@@ -114,7 +114,8 @@ extension _BulkAddDish on _BulkAddScreenState {
                 : null,
             icon: const Icon(Icons.remove),
           ),
-          const SizedBox(width: 4),
+          // 8 dp between the steppers and the amount (A1)
+          const SizedBox(width: 8),
           Flexible(
             child: Semantics(
               identifier: 'bulk-add-dish-portion',
@@ -148,7 +149,7 @@ extension _BulkAddDish on _BulkAddScreenState {
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
           IconButton.filledTonal(
             key: const ValueKey('bulk-add-dish-more'),
             style: _stepperStyle.merge(

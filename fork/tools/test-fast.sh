@@ -34,7 +34,8 @@ files = sorted(
     if f.endswith("_test.dart")
     # They start the whole app, whose one-time Hive registration needs a process of its own.
     and f not in ("upgrade_test.dart", "day_macro_goals_follow_profile_edit_test.dart",
-                  "demo_name_test.dart")
+                  "demo_name_test.dart", "demo_per_profile_test.dart",
+                  "demo_legacy_mark_test.dart")
 )
 for old in os.listdir("test"):
     if old.startswith("_bundle_"):
@@ -74,4 +75,5 @@ EOF
 # lib/generated is not committed: a pulled ARB change needs it rebuilt.
 flutter gen-l10n
 fork/tools/heavy.sh flutter test test/_bundle_*.dart test/fork/upgrade/upgrade_test.dart \
-  test/fork/diary/day_macro_goals_follow_profile_edit_test.dart test/fork/profile/demo_name_test.dart "$@"
+  test/fork/diary/day_macro_goals_follow_profile_edit_test.dart test/fork/profile/demo_name_test.dart \
+  test/fork/demo/demo_per_profile_test.dart test/fork/demo/demo_legacy_mark_test.dart "$@"

@@ -134,6 +134,8 @@ void main() {
     // A week in with no trend yet: no change or pace to show.
     expect(find.textContaining('plan +0.3 kg'), findsNothing);
     expect(find.textContaining('plan +0.25 kg a week'), findsNothing);
+    // Nothing logged yet: no "Eaten a day" row, rather than a spoken dash.
+    expect(find.text('–'), findsNothing);
     expect(
       tester.getTopLeft(find.text('Bulk (now)')).dy,
       lessThan(tester.getTopLeft(find.text('Maintenance')).dy),
@@ -145,7 +147,7 @@ void main() {
     expect(find.text('90.0 kg → 88.4 kg'), findsOneWidget);
     expect(find.text('\u22121.6 kg · plan \u22121.9 kg'), findsOneWidget);
     expect(
-      find.text('\u22120.42 kg a week · plan \u22120.50 kg a week'),
+      find.text('\u22120.42 kg a week · plan \u22120.5 kg a week'),
       findsOneWidget,
     );
     expect(find.text('2200 kcal'), findsOneWidget);

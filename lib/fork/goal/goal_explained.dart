@@ -234,8 +234,11 @@ class GoalExplainedBody extends StatelessWidget {
               ),
               if (showTargetNote && settings.adaptiveTarget)
                 ListTile(
-                  title: const Text('Adaptive expenditure'),
-                  subtitle: const Text('From your weigh-ins and logs'),
+                  key: const ValueKey('goal-explained-check-in-history'),
+                  title: const Text('Check-in history'),
+                  subtitle: const Text(
+                    'Each adaptive target set, from your weigh-ins and logs',
+                  ),
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(

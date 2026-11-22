@@ -674,6 +674,109 @@ void main() {
       expect(SidePartPref.current.value, SidePart.thighs);
     });
   });
+
+  group('G5 leftovers', () {
+    Widget card(MeasurementStore store) => MaterialApp(
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: BodyMeasurementsCard(
+            rangeDays: 30,
+            palette: AppPalette.light,
+            imperial: false,
+            store: store,
+          ),
+        ),
+      ),
+    );
+
+    // G5-17: the chip stayed on the first metric saved, not the one viewed.
+    testWidgets('after a save the metric in view stays picked', (
+      tester,
+    ) async {
+      final memory = _Memory()
+        ..entries.addAll([
+          Measurement(
+            id: 'w0',
+            date: DateTime.now().subtract(const Duration(days: 3)),
+            metric: BodyMetric.waist,
+            value: 80,
+          ),
+          Measurement(
+            id: 'h0',
+            date: DateTime.now().subtract(const Duration(days: 3)),
+            metric: BodyMetric.hips,
+            value: 98,
+          ),
+        ]);
+      await tester.pumpWidget(card(memory));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hips'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('measure-add')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('measure-waist')), '79');
+      await tester.enterText(find.byKey(const ValueKey('measure-hips')), '97');
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(memory.saved.keys, {BodyMetric.waist, BodyMetric.hips});
+      expect(find.text('Hips entries'), findsOneWidget);
+      expect(find.text('Waist entries'), findsNothing);
+    });
+
+    // Audit A3 P3: a failed write said nothing.
+    testWidgets('a save that fails says so', (tester) async {
+      final failing = _Failing();
+      await tester.pumpWidget(card(failing));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('measure-add')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const ValueKey('measure-waist')), '79');
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't save the measurements. Try again."),
+        findsOneWidget,
+      );
+    });
+
+    // Audit A3 P3: a failed delete said nothing.
+    testWidgets('a delete that fails says so', (tester) async {
+      final store = _FailingRemove()
+        ..entries.add(
+          Measurement(
+            id: 'w',
+            date: DateTime.now(),
+            metric: BodyMetric.waist,
+            value: 80,
+          ),
+        );
+      await tester.pumpWidget(card(store));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Waist entries'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('measure-delete-w')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't delete the measurement. Try again."),
+        findsOneWidget,
+      );
+      expect(store.entries, hasLength(1));
+    });
+
+    // Audit A3 P3: the field's unit was spoken "c m".
+    testWidgets('a field speaks its unit in words', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(card(_Memory()));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('measure-add')));
+      await tester.pumpAndSettle();
+      expect(find.bySemanticsLabel(RegExp('centimetres')), findsWidgets);
+      expect(find.text('cm'), findsWidgets);
+      semantics.dispose();
+    });
+  });
 }
 
 class _Memory extends Fake implements MeasurementStore {
@@ -715,4 +818,17 @@ class _Memory extends Fake implements MeasurementStore {
     entries.addAll(measurements);
     MeasurementStore.changes.value++;
   }
+}
+
+class _Failing extends _Memory {
+  @override
+  Future<({List<Measurement> added, List<Measurement> replaced})> addDay(
+    DateTime date,
+    Map<BodyMetric, double> values,
+  ) async => throw StateError('disk full');
+}
+
+class _FailingRemove extends _Memory {
+  @override
+  Future<void> remove(String id) async => throw StateError('read-only');
 }

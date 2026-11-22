@@ -31,6 +31,9 @@ import 'package:opennutritracker/fork/ai/hosted_key_check.dart';
 // [fork] S455 ai-label-accent
 import 'package:opennutritracker/fork/display/contrast.dart';
 // [/fork]
+// [fork] S582 ai-setup-page
+import 'package:opennutritracker/fork/ai/setup_page.dart';
+// [/fork]
 
 /// Where the user chooses a provider, supplies a key for it, picks a model,
 /// and pauses or removes any of it.
@@ -103,10 +106,17 @@ class AiAssistDialog extends StatefulWidget {
     // [fork] S357 hosted-key-check
     http.Client? forkKeyCheckClient,
     // [/fork]
-  }) => showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (_) => AiAssistDialog(
+  // [fork] S582 ai-setup-page: a settings page, so a full-screen page; the
+  // PopScope below still routes back and the close button through _cancel
+  // }) => showDialog<bool>(
+  //   context: context,
+  //   barrierDismissible: false,
+  //   builder: (_) => AiAssistDialog(
+  }) => Navigator.of(context).push<bool>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => AiAssistDialog(
+  // [/fork]
       storage: storage,
       modelList: modelList,
       probeRunner: probeRunner,
@@ -114,7 +124,11 @@ class AiAssistDialog extends StatefulWidget {
       forkKeyCheckClient: forkKeyCheckClient,
       // [/fork]
     ),
+  // [fork] S582 ai-setup-page
+  // ).then((changed) => changed ?? false);
+    ),
   ).then((changed) => changed ?? false);
+  // [/fork]
 
   /// The accessibility identifier for a model row.
   ///
@@ -1347,7 +1361,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
   }
 
   Widget _buildDialog(BuildContext context, S s, ThemeData theme) {
-    return AlertDialog(
+    // [fork] S582 ai-setup-page: the same title, content and actions on a
+    // full-screen page
+    // return AlertDialog(
+    return AiSetupPage(
+    // [/fork]
       // The Experimental marker is deliberately *not* appended here. At a 2x
       // text scale on a 320px phone it makes this title tall enough to squeeze
       // the content area and overflow the dialog by 48px — the bound the
@@ -1630,7 +1648,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                       // words are S318's forkGeminiRowDisclosure
                       '${_forkGemini ? forkGeminiRowDisclosure(aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)) :
                       // [/fork]
-                      aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)}'
+                      // [fork] S581 ai-feature-names
+                      // aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text)}'
+                      forkFeatureNames(aiDisclosureFor(s, provider: _provider, typedEndpoint: _endpointController.text))}'
+                      // [/fork]
                       '\n\n${s.aiAssistDisclosureCommon}',
                       style: theme.textTheme.bodySmall,
                     ),
@@ -1907,7 +1928,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
           // inconclusive rows, so "we asked and got nothing" is not one
           // glyph's difference away from "nobody has asked" at a glance.
           color: switch (state) {
-            _ProbeRowState.passed => theme.colorScheme.primary,
+            // [fork] S583 ai-setup-details: the raw accent, which a light
+            // picked one takes under 3:1
+            // _ProbeRowState.passed => theme.colorScheme.primary,
+            _ProbeRowState.passed => textAccent(context),
+            // [/fork]
             _ProbeRowState.failed => theme.colorScheme.error,
             _ProbeRowState.noAnswer => theme.colorScheme.onSurface,
             _ProbeRowState.neverChecked => theme.colorScheme.onSurfaceVariant,
@@ -2057,6 +2082,10 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
               child: DropdownButton<String>(
                 // Long ids ellipsize instead of overflowing the dialog.
                 isExpanded: true,
+                // [fork] S583 ai-setup-details: a row grows to the id's
+                // second line
+                itemHeight: null,
+                // [/fork]
                 hint: Text(s.aiAssistPickModelLabel),
                 // Null rather than a guess when the field holds something the
                 // server did not offer: a typed id is still a valid answer,
@@ -2072,7 +2101,11 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
                       child: Text(
                         id,
                         style: theme.textTheme.bodyMedium,
-                        maxLines: 1,
+                        // [fork] S583 ai-setup-details: one line cut a
+                        // server's long model names short
+                        // maxLines: 1,
+                        maxLines: 2,
+                        // [/fork]
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),

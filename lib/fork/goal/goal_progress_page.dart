@@ -20,9 +20,7 @@ import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/goal_summary.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/chart_touch.dart';
-import 'package:opennutritracker/fork/report/rate_text.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
-import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -224,9 +222,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
 
   String _kg(double kg) => weightIn(widget.unit, kg).toStringAsFixed(1);
 
-  String _rate(double kgPerWeek) =>
-      '${signedRate(weightIn(widget.unit, kgPerWeek))} '
-      '${weightUnitLabel(context, widget.unit)} a week';
+  String _rate(double kgPerWeek) => signedPaceText(kgPerWeek, widget.unit);
 
   List<Widget> _body(
     BuildContext context,
@@ -236,7 +232,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     PhasePlan? plan,
     List<GoalRecord> history,
   ) {
-    final label = weightUnitLabel(context, widget.unit);
+    final label = goalWeightLabel(widget.unit);
     final format = intl.DateFormat.MMMd(
       Localizations.localeOf(context).toLanguageTag(),
     );
@@ -408,7 +404,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
     }
     final rows = p.milestones(step, perKg: perKg, kgPerWeek: kgPerWeek);
     final palette = paletteOf(context);
-    final label = weightUnitLabel(context, widget.unit);
+    final label = goalWeightLabel(widget.unit);
     return [
       trendSection(
         context,
@@ -443,7 +439,8 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
                       const SizedBox(width: Dimens.spacing12),
                       Expanded(
                         child: Text(
-                          '${_kg(m.kg)} $label'
+                          // one line for the weight and its unit at 200%
+                          '${_kg(m.kg)}\u00A0$label'
                           '${i == rows.length - 1 ? ' · target' : ''}',
                         ),
                       ),
@@ -533,9 +530,9 @@ class _ProgressCard extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    Positioned(
-                      left: 0,
-                      right: 0,
+                    PositionedDirectional(
+                      start: 0,
+                      end: 0,
                       top: 4,
                       child: ClipRRect(
                         borderRadius: Dimens.borderRadiusS,
@@ -551,8 +548,10 @@ class _ProgressCard extends StatelessWidget {
                       ),
                     ),
                     // The plan's mark for today.
-                    Positioned(
-                      left: (box.maxWidth * p.planFraction - 1).clamp(
+                    // Directional, as LinearProgressIndicator fills from
+                    // the start in a right-to-left language.
+                    PositionedDirectional(
+                      start: (box.maxWidth * p.planFraction - 1).clamp(
                         0,
                         box.maxWidth - 2,
                       ),
@@ -716,7 +715,7 @@ class _GoalChart extends StatelessWidget {
       Localizations.localeOf(context).toLanguageTag(),
     );
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final label = weightUnitLabel(context, unit);
+    final label = goalWeightLabel(unit);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

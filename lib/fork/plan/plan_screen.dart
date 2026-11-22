@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/navigation_options.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_screen.dart';
 import 'package:opennutritracker/features/add_meal/presentation/add_meal_type.dart';
@@ -120,7 +121,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
     final weekdays = await showDialog<Set<int>>(
       context: context,
       builder: (_) => RepeatDialog(
-        name: food.meal.name ?? '',
+        name: plannedName(food),
         initial: food.weekdays,
         repeating: true,
         stopLabel: 'Remove',
@@ -181,6 +182,10 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                     identifier: 'plan-add-recurring',
                     child: OutlinedButton.icon(
                       key: const ValueKey('plan-add-recurring'),
+                      // the theme gives the filled button 52 dp, this one 48
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(64, Dimens.minTouchTarget),
+                      ),
                       icon: const Icon(Icons.repeat_rounded),
                       label: const Text('Add recurring meal'),
                       onPressed: () => _add(day, PlanMode.recurring),
@@ -265,7 +270,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       for (final food in foods)
         ListTile(
           key: ValueKey('plan-recurring-${food.id}'),
-          title: Text(food.meal.name ?? ''),
+          title: Text(plannedName(food)),
           subtitle: Text(
             '${mealLabel(context, food.type)} · '
             '${repeatText(context, food.weekdays)}',

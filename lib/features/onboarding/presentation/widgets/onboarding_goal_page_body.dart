@@ -137,22 +137,38 @@ class _OnboardingGoalPageBodyState extends State<OnboardingGoalPageBody> {
   /// the choice, with the numbers' direction stated.
   Widget _buildSuggestedBadge() {
     final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Dimens.spacing8,
-        vertical: Dimens.spacing4,
-      ),
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(Dimens.radiusS),
-      ),
-      child: Text(
-        S.of(context).onboardingGoalSuggestedBadge,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(color: colors.onSecondaryContainer),
-      ),
+    // [fork] S547 suggested-label: a filled pill beside the chips read as one
+    // more chip to tap; a star and a word do not
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.star_rounded, size: 16, color: colors.onSurfaceVariant),
+        const SizedBox(width: Dimens.spacing4),
+        Text(
+          S.of(context).onboardingGoalSuggestedBadge,
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: colors.onSurfaceVariant),
+        ),
+      ],
     );
+    // return Container(
+    //   padding: const EdgeInsets.symmetric(
+    //     horizontal: Dimens.spacing8,
+    //     vertical: Dimens.spacing4,
+    //   ),
+    //   decoration: BoxDecoration(
+    //     color: colors.secondaryContainer,
+    //     borderRadius: BorderRadius.circular(Dimens.radiusS),
+    //   ),
+    //   child: Text(
+    //     S.of(context).onboardingGoalSuggestedBadge,
+    //     style: Theme.of(
+    //       context,
+    //     ).textTheme.labelSmall?.copyWith(color: colors.onSecondaryContainer),
+    //   ),
+    // );
+    // [/fork]
   }
 
   /// States what the suggestion rests on, so it reads as a derivation rather

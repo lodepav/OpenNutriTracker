@@ -110,7 +110,13 @@ class _HighlightButtonState extends State<HighlightButton> {
                 ? const SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    // [fork] S545 busy-label: the spinner was an unnamed node
+                    // child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Saving',
+                    ),
+                    // [/fork]
                   )
                 : const Icon(Icons.navigate_next_outlined),
             // icon: const Icon(Icons.navigate_next_outlined),

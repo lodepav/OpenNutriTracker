@@ -13,6 +13,9 @@ void main() {
       ),
     );
     expect(find.byType(StorageRescuePanel), findsNothing);
-    expect(find.textContaining('contact support'), findsOneWidget);
+    expect(
+      find.textContaining('report the error code at github.com'),
+      findsOneWidget,
+    );
   });
 }

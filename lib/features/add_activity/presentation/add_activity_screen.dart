@@ -101,7 +101,10 @@ class _AddActivityScreenState extends State<AddActivityScreen>
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: Dimens.borderRadiusM,
-                  borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+                  // [fork] S552 field-edge: the hairline read about 1.1:1, 3:1 now
+                  // borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+                  borderSide: BorderSide(color: palette.textMuted, width: Dimens.hairline),
+                  // [/fork]
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: Dimens.borderRadiusM,

@@ -8,6 +8,7 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/activity_detail/presentation/bloc/activity_detail_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/activity/entry_hints.dart'; // [fork] S553
 import 'package:provider/provider.dart';
 
 /// Bottom sheet for the Activity Detail screen.
@@ -157,7 +158,10 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: Dimens.borderRadiusM,
-        borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+        // [fork] S552 field-edge: the hairline read about 1.1:1, 3:1 now
+        // borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+        borderSide: BorderSide(color: palette.textMuted, width: Dimens.hairline),
+        // [/fork]
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: Dimens.borderRadiusM,
@@ -238,6 +242,19 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
                   child: Column(
                     children: [
                       if (isCustom) ...[
+                        // [fork] S553 activity-entry-words: when this one,
+                        // and not Quick add, is the way to log it
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            bottom: Dimens.spacing12,
+                          ),
+                          child: Text(
+                            customActivityWhen,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        // [/fork]
                         Row(
                           children: [
                             Expanded(
@@ -308,13 +325,20 @@ class _ActivityDetailBottomSheetState extends State<ActivityDetailBottomSheet> {
                                 ],
                                 decoration: _fieldDecoration(
                                   context,
+                                  // [fork] S553 activity-entry-words: Quick
+                                  // add's name for the field; its unit is the
+                                  // Unit beside it, which a "(kcal)" would cut
+                                  // labelText: isCustom
+                                  //     ? (usesKj
+                                  //         ? S.of(context).mealEnergyLabel
+                                  //         : S
+                                  //             .of(context)
+                                  //             .customActivityKcalLabel)
+                                  //     : S.of(context).quantityLabel,
                                   labelText: isCustom
-                                      ? (usesKj
-                                          ? S.of(context).mealEnergyLabel
-                                          : S
-                                              .of(context)
-                                              .customActivityKcalLabel)
+                                      ? 'Energy burned'
                                       : S.of(context).quantityLabel,
+                                  // [/fork]
                                   hintText: isCustom
                                       ? S.of(context).customActivityKcalHint
                                       : null,

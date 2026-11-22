@@ -113,8 +113,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(SidePartPref.current.value, SidePart.thighs);
     expect(find.text('Thighs: left and right'), findsOne);
-    expect(find.textContaining('Measure your left and right thighs'), findsOne);
-    expect(find.text('No thighs measured yet.'), findsOne);
+    // G5-17: one empty line by its button, none further down.
+    expect(
+      find.text(
+        'No thighs measured yet. Measure your left and right thighs on the '
+        'same day to compare them.',
+      ),
+      findsOne,
+    );
+    expect(find.textContaining('under Body measurements'), findsNothing);
+    expect(find.byType(LineChart), findsNothing);
   });
 
   testWidgets('the chart and the rows speak sides and units in words', (
@@ -268,5 +276,24 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sides-add')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('measure-leftThigh')), findsOne);
+  });
+
+  // G5-13: one day would be two lone dots; the figures above say it.
+  testWidgets('a single day of both sides draws no chart', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SideComparePage(
+          imperial: false,
+          rangeDays: 30,
+          load: () async => [
+            _m(-1, BodyMetric.leftArm, 35.4),
+            _m(-1, BodyMetric.rightArm, 36.4),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Right bigger by 1.0 cm, '), findsOne);
+    expect(find.byType(LineChart), findsNothing);
   });
 }

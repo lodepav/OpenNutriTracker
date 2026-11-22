@@ -298,6 +298,27 @@ class BuilderSaveBar extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // at large text one line, so the list keeps the room (A6)
+              if (MediaQuery.textScalerOf(context).scale(1) > 1.3)
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text:
+                            '${energyText(context, of(per100.energyKcal100))} · ',
+                      ),
+                      ...macroSpans(context, (
+                        kcal: of(per100.energyKcal100),
+                        carbs: of(per100.carbohydrates100),
+                        fat: of(per100.fat100),
+                        protein: of(per100.proteins100),
+                      ), small: true),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium,
+                )
+              else
               Row(
                 children: [
                   figure(

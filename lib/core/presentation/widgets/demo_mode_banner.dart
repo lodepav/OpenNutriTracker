@@ -14,6 +14,9 @@ import 'package:opennutritracker/fork/display/contrast.dart' show textSafe;
 import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
     show destructiveFilledStyle;
 // [/fork]
+// [fork] S563 demo-per-profile
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
+// [/fork]
 
 /// Persistent banner shown above every tab of `MainScreen` while the
 /// active profile holds seeded sample data (see
@@ -30,6 +33,10 @@ class DemoModeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // [fork] S563 demo-per-profile: a demo from an older release takes the
+    // mark for the profile it shows on, once
+    adoptDemoMark();
+    // [/fork]
     // [fork] S232 banner-cap: as wide as the tabs' content on a wide window
     return WidthCap(child: _banner(context));
   }

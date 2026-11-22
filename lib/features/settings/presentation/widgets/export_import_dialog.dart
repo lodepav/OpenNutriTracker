@@ -139,6 +139,12 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                 ],
                 selected: {_exportFormat},
                 onSelectionChanged: (next) {
+                  // [fork] S580 import-refresh-once: its reset mid-run would
+                  // drop the running import's reload
+                  if (_exportImportBloc.state is ExportImportLoadingState) {
+                    return;
+                  }
+                  // [/fork]
                   setState(() => _exportFormat = next.first);
                   // Clear any success/error chrome left over from a
                   // previous export so the description re-appears under
@@ -191,10 +197,19 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                           'replace yours.',
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          S.of(context).exportImportDescription,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 15,
+                        // What the two formats hold, and how this backup
+                        // differs from the diary's CSV export (G6-7)
+                        // Text(
+                        //   S.of(context).exportImportDescription,
+                        //   overflow: TextOverflow.ellipsis,
+                        //   maxLines: 15,
+                        // ),
+                        const Text(
+                          'Export saves a backup file you can import later, '
+                          'here or on another phone. JSON holds everything; '
+                          'a CSV backup leaves out recipes. For a '
+                          'spreadsheet of what you ate, use Export diary as '
+                          'CSV instead.\n\nNothing is kept in a cloud.',
                         ),
                       ],
                     );
@@ -202,7 +217,10 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                   } else if (state is ExportImportLoadingState) {
                     return const LinearProgressIndicator();
                   } else if (state is ExportImportSuccess) {
-                    refreshScreens();
+                    // [fork] S580 import-refresh-once: reloads from
+                    // _forkImport, once per import, not on each build
+                    // refreshScreens();
+                    // [/fork]
                     return Row(
                       children: [
                         Icon(
@@ -245,29 +263,85 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
       // [/fork]
       ),
       actions: <Widget>[
-        // [fork] S315 export-dialog-scrolls: an exit that does neither
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(S.of(context).dialogCancelLabel),
+        // [fork] S315 export-dialog-scrolls: an exit that does neither;
+        // Close once one has finished (S580)
+        _forkWatch(
+          (state) => TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              state is ExportImportSuccess
+                  ? 'Close'
+                  : S.of(context).dialogCancelLabel,
+            ),
+          ),
         ),
         // [/fork]
-        TextButton(
-          onPressed: () => _exportImportBloc.add(
-            ExportDataEvent(format: _exportFormat),
+        // [fork] S580 import-refresh-once: no second run while one runs; an
+        // import reloads the screens when it ends
+        // TextButton(
+        //   onPressed: () => _exportImportBloc.add(
+        //     ExportDataEvent(format: _exportFormat),
+        //   ),
+        //   child: Text(S.of(context).exportAction),
+        // ),
+        // TextButton(
+        //   onPressed: () => _exportImportBloc.add(
+        //     ImportDataEvent(format: _exportFormat),
+        //   ),
+        //   child: Text(S.of(context).importAction),
+        // ),
+        _forkWatch(
+          (state) => TextButton(
+            onPressed: state is ExportImportLoadingState
+                ? null
+                : () => _exportImportBloc.add(
+                    ExportDataEvent(format: _exportFormat),
+                  ),
+            child: Text(S.of(context).exportAction),
           ),
-          child: Text(S.of(context).exportAction),
         ),
-        TextButton(
-          onPressed: () => _exportImportBloc.add(
-            ImportDataEvent(format: _exportFormat),
+        _forkWatch(
+          (state) => TextButton(
+            onPressed: state is ExportImportLoadingState ? null : _forkImport,
+            child: Text(S.of(context).importAction),
           ),
-          child: Text(S.of(context).importAction),
         ),
+        // [/fork]
       ],
     );
   }
 
-  void refreshScreens() {
+  // [fork] S580 import-refresh-once
+  Widget _forkWatch(Widget Function(ExportImportState state) build) =>
+      BlocBuilder<ExportImportBloc, ExportImportState>(
+        bloc: _exportImportBloc,
+        builder: (context, state) => build(state),
+      );
+
+  /// Starts an import and reloads the screens when it succeeds, also when
+  /// the dialog was closed while it ran: the app's context, not this one.
+  void _forkImport() {
+    final appContext = Navigator.of(context, rootNavigator: true).context;
+    final ended = _exportImportBloc.stream.firstWhere(
+      (state) => state is! ExportImportLoadingState,
+    );
+    _exportImportBloc.add(ImportDataEvent(format: _exportFormat));
+    ended.then(
+      (state) {
+        if (state is ExportImportSuccess && appContext.mounted) {
+          refreshScreens(appContext);
+        }
+      },
+      // The bloc closed first: nothing finished, nothing to reload
+      onError: (Object _) {},
+    );
+  }
+  // [/fork]
+
+  // [fork] S580 import-refresh-once: the context outlives the dialog
+  // void refreshScreens() {
+  void refreshScreens(BuildContext context) {
+  // [/fork]
     _homeBloc.add(const LoadItemsEvent());
     _diaryBloc.add(const LoadDiaryYearEvent());
     _calendarDayBloc.add(RefreshCalendarDayEvent());

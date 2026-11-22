@@ -316,3 +316,64 @@ deferred finding again without new evidence. Newest last.
 | 2026-11-22 | A3 | G2-41 | P2 | H9, P5, A3 | Edit meal barcode, full-screen photo | The package's black camera error; the full-screen photo cropped, unnamed, with a low-contrast Back | accept | ScannerError; contain on black with a label and white bar (audit G2 a3) |
 | 2026-11-22 | A3 | G3-30 | P2 | P1, H5 | Recipe selection, builder amounts | Back leaves Recipes during selection; a cleared or 0 amount is ignored silently | accept | PopScope that ends the selection; a field error with Save off (audit G3 a3) |
 | 2026-11-22 | A4 | G1-36 | P2 | A2, A10, H5 | Overview, kcal goal info, intro | The calorie goal figure in the raw picked accent; Restore and Try demo can run together | accept | textAccent; one busy flag for both buttons (audit G1 a4) |
+| 2026-11-22 | L | G1-20 | P2 | H9 | Body | 5 ft with empty inches refused | fixed | Empty second half is 0 in the shared inputs |
+| 2026-11-22 | L | G1-24 | P3 | H2, C1 | Planner at first run | Jargon in steps 3, 5, 6 | fixed | Estimate settings folded; plain macros and expenditure wording at first run |
+| 2026-11-22 | L | G1-29 | P2 | adapt | Onboarding, planner | No width cap | fixed | Centred at 600 dp |
+| 2026-11-22 | L | G1-32 | P3 | perf | Splash | Fixed 2 s wait | fixed | Leaves after 250 ms |
+| 2026-11-22 | L | G1-13 | P3 | H6, C1, C3 | Intro, goal, About you, recovery | Lows | fixed in part | Start waits on demo or restore; Suggested label; check replaces symbol; issue link; l10n items in the l10n sweep |
+| 2026-11-22 | L | G1-6 | P3 | H2, H9, H8 | Splash, recovery | Lows | fixed in part | Recovery uses app theme; splash quick; l10n items in the l10n sweep |
+| 2026-11-22 | L | G1-A4-P3 | P3 | A3, adapt, perf | Onboarding | Footer 1/7, stray FocusNode, no page announcement, unnamed spinner and logo, swatch row with no cue | fixed | footerFlex 0, unfocus, announcement, labels, Wrap |
+| 2026-11-22 | L | G2-water-undo | P2 | H5 | Log water | Undo last removed the latest-timed drink, not the one just logged | fixed | Picks by the logged id's stamp; the dialog names the same drink (S550) |
+| 2026-11-22 | L | G2-12 | P2 | H3 | Fasting | Notification permission asked on open | fixed | Asked only when a fast is started on the page |
+| 2026-11-22 | L | G2-13-16 | P3 | A1, A2 | Leftovers chips, EN chip | Weak selected chip, 40 dp chip | fixed | chosenChips on leftovers, 48 dp language button (S555); portions and warning links in the sweep |
+| 2026-11-22 | L | G2-19 | P3 | C5, H4 | Other match icon, photo disclosure sheet | ⇄ meant two things; sheet had no title or Cancel | fixed | Search icon; title and Cancel |
+| 2026-11-22 | L | G2-24 | P2 | H4 | Quick add / Custom activity, food units | Two flows named their fields differently | fixed | Shared field names and hints, a when-to-use line each (S553); food units already one rule |
+| 2026-11-22 | L | G2-25 | P3 | C1, H8 | Leftovers unit, water total, photo bars | "1 → 0.5 oz", no today total, grey bars | fixed | Unit on both, "Today so far", black bars (S554, S556); basket items in the sweep |
+| 2026-11-22 | L | G2-39 | P2 | A2 | Text fields app-wide | Field edges about 1.1:1 | fixed | Theme edge in textMuted at 3:1, error edge kept (S552) |
+| 2026-11-22 | L | G2-a3-P3 | P3 | A1, A3, A5 | Steppers, water readout, sheet title, AI field, "min" | Audit P3s | fixed | 8 dp gaps, textAccent, header, label, spoken minutes |
+| 2026-11-22 | L | G3-7 | P3 | A6, H1, H9, H6, H8 | Recipes, builder, profiles | Footer at 200%, "— kcal", name error, Duplicate save, Copy wording, Log another amount | fixed | Footer stacks, today's goal, inline name error, "Copy saved" + Open, sheet names meal/day/profile, no second meal sheet; dropdown not reproduced |
+| 2026-11-22 | L | G3-12 | P3 | P5, H2, C2 | Recipes, builder, profiles | Food pictures, "since", Total weight 0, prefill | fixed | No DNA for "protein" names, since the first logged day, empty weight, 100 g prefill |
+| 2026-11-22 | L | G3-16 | P3 | A6 | Builder at 200% | Footer 40%, macro dots break | fixed | One-line totals at large text, word joiner after each dot |
+| 2026-11-22 | L | G3-19 | P2 | H2 | Custom foods | Per-serving food listed per 100 g | fixed | Mode store, row says per serving (S560) |
+| 2026-11-22 | L | G3-20 | P2 | H9 | Scanners | Allow camera dead after refusing for good | fixed | Opens app settings, re-checks on return (permission_handler) |
+| 2026-11-22 | L | G3-21 | P3 | H8 | Ingredient picker | Products repeats Recently, no pictures | fixed | Opens on Recently, Products without repeats, builder pictures |
+| 2026-11-22 | L | G3-22 | P2 | H1 | Demo | Banner lost on the demo profile once a second profile exists | fixed | Mark per profile, synced on switch (S563) |
+| 2026-11-22 | L | G3-25 | P2 | H7 | Custom foods | No search | fixed | Name search, No foods match, Clear (S561) |
+| 2026-11-22 | L | G3-28 | P3 | C1 | Recipes | Radii, + menu repeats footer | fixed | Dimens radii, menu removed, edges 3:1 (S562, S568) |
+| 2026-11-22 | L | G4-7 | P3 | H6 | Goal calendar | Day sheet did not name the tapped day; the first-column month label hid the next | fixed | Sheet names the day; the part month gives way |
+| 2026-11-22 | L | G4-12 | P3 | A6, C1 | Goal progress, macros, expenditure | Units wrapped alone at 200%; jargon notes; completed chart undated | fixed | No-break spaces; plain notes and switch subtitle; chart start and Today |
+| 2026-11-22 | L | G4-19 | P3 | H4 | Goal pages, You tile, Goal card | lbs vs lb, 0.50 vs 0.5; history row unnamed | fixed | "lb"; one pace format; "Check-in history" row |
+| 2026-11-22 | L | G4-22 | P2 | H3 | Check-in history | A check-in could not be undone after the snackbar | fixed | The latest check-in undone after a confirm, target restored |
+| 2026-11-22 | L | G4-25 | P3 | H5 | Goal planner | A tiny remaining change left an extra week | fixed | A crossed target ends the goal this week |
+| 2026-11-22 | L | G5-7 | P3 | H6, A4 | Steps, photos, BMI | Steps chart had no dates or key; viewer no zoom; band only by colour | fixed | Dates and legend; zoom; "You" on the band (S571) |
+| 2026-11-22 | L | G5-13 | P3 | H4 | Side compare, nutrient goals | A lone-dot chart for one day; bare "Edit" | fixed | Chart from 2 days; "Edit goals" |
+| 2026-11-22 | L | G5-17 | P3 | H3 | Photos, body card, side compare | Untitled add sheet; chip jumped after save; two-part empty text | fixed | Titled sheet; viewed metric kept; one-line empty state |
+| 2026-11-22 | L | G5-23 | P2 | H2 | BMI info | Metric for imperial users | fixed | User's units with the metric in brackets (S570) |
+| 2026-11-22 | L | G5-26 | P3 | adapt | Compare photos | No room in landscape | fixed | Scrolls under 480 dp |
+| 2026-11-22 | L | G4-G5-a3-P3 | P3 | A2, H9 | Photos, body, goal bar | Audit P3s | fixed | Delete in red, failed save/delete said, sized strip decode, unit spoken, RTL bar |
+| 2026-11-22 | L | G6-7 | P3 | H4, H2 | Day starts at, Per-meal share, Export wording, Support | Lows | fixed | Day start already chips (S347); "snack" and rescale note (S585); export text says what each format holds; Support stays unlinked per D41 |
+| 2026-11-22 | L | G6-12 | P3 | H4, H2 | Search sources, nutrient editor | Title repeated its section; "20g" | fixed | Titled Search sources (S587); units spaced (S586); raw model ids kept as upstream designed |
+| 2026-11-22 | L | G6-16 | P3 | H8 | Search sources, Reset | "About them:" wrap; finality last | fixed | Label on its own line; "for good" in the first line |
+| 2026-11-22 | L | G6-18 | P2 | H2, C5 | AI disclosures | Named a "multi-item add screen" | fixed | Log with AI and Photo log on every provider (S581) |
+| 2026-11-22 | L | G6-25 | P2 | perf | Export / import | refreshScreens inside build | fixed | Reload once when an import ends, also after close (S580) |
+| 2026-11-22 | L | G6-27 | P3 | P3 | AI setup | Settings page in an AlertDialog | fixed | Full-screen page (S582) |
+| 2026-11-22 | L | G6-a3 | P3 | A2, H1, H5 | Health Connect, AI setup, Export / import | Audit P3s | fixed | paletteOf; failures said as such (S584); probe accent and model ids (S583); buttons off while running (S580) |
+| 2026-11-22 | L | G5-13b | P3 | H4 | Nutrient goals editor | Same title as the overview | fixed | "Edit nutrient goals" (S135 block) |
+| 2026-11-22 | L | G1-6 | P3 | H4 | Onboarding intro | Demo caption stale; policy named twice | fixed | S590, S591 |
+| 2026-11-22 | L | G1-13 | P3 | H4 | Onboarding activity, other options, disclaimer | Title Case levels, mixed examples, wrong tab name | fixed | S592-S595 |
+| 2026-11-22 | L | G2-25 | P2 | H5 | Basket | Bar 193 vs rows 192; plan mode named "basket"; "Log all 1" | fixed | One rounding rule; planning names; singular |
+| 2026-11-22 | L | G2-13 | P3 | H8 | Food page amounts | Same-weight portions listed twice | fixed | Shown once, the selected one kept |
+| 2026-11-22 | L | G2-16 | P3 | A4 | Fasting warning | Links were small text; "Not for me" | fixed | 48 dp links; "Not now" (S596) |
+| 2026-11-22 | L | G2-16b | P3 | H1 | Fasting | End fast did not say what happens to the time | fixed | Body text; confirm in the error colour |
+| 2026-11-22 | L | G3-7 | P3 | H4 | Workout scanner, Activity menu, share hint | Title cut off | fixed | "Import workout" everywhere (S598) |
+| 2026-11-22 | L | G2-emoji | P3 | H2 | Food rows | Almond shown as peanut | fixed | Chestnut (S597) |
+| 2026-11-22 | L | G2-backup | P1 | data | Backup | Per-serving marks and the demo mark not in backups | fixed | Both backed up; a restore brings back only "not a demo", since leaving a demo wipes the profile; demo exit clears the marks (S599) |
+| 2026-11-22 | L | G4-12b | P3 | H8, A6 | Phase reports | "Eaten a day" read aloud as a dash when nothing is logged; day-one arrows | fixed | Row left out when nothing is logged; day-one arrows were already one figure, and Completed goals already says Started today |
+| 2026-11-22 | L | G4-7b | P3 | H4 | Meal plan | Plan foods 52 dp beside Add recurring meal 48 dp; empty titles for a nameless food | fixed | Both 52 dp; "Unnamed food" |
+| 2026-11-22 | L | G4-7c | P3 | H2 | Home | The check-in card sits under the tiles, below the fold | fixed | Default order puts the check-in before the tiles (S600); a saved layout keeps its order |
+| 2026-11-22 | L | G5-7b | P3 | H4, C5 | You | The BMI tile says "Overweight" where the BMI page says "Pre-obesity" | reject | The tile's plain words are on purpose (60e2c7df: WHO's terms read as jargon); main reverted the change |
+| 2026-11-22 | L | G6-7b | P3 | A2 | Sliders | Inactive track close to invisible in dark | fixed | Muted text colour, 3:1 (S605) |
+| 2026-11-22 | L | G6-7c | P3 | H4, H6 | OFF account | Fields live while off; no way to sign up | fixed | Fields and test-server switch off until the switch is on; Create an account link |
+| 2026-11-22 | L | G6-a4 | P3 | perf, A7 | OFF contribution review | Label photo decoded full size; "Per 100 g" not a heading | fixed | cacheWidth; heading semantics |
+| 2026-11-22 | L | G6-14b | P2 | H10, H2 | Sources & references | Intro claim, twice cited, titles not headings | fixed | Already done earlier (S304, S416, S305) |
+| 2026-11-22 | L | G6-12b | P3 | H6 | Goals & nutrition | Water goal not with the other goals | fixed | Water goal row in Nutrition (main), You keeps its row |

@@ -13,6 +13,9 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/fork/profile/profiles_view.dart';
 // [/fork]
+// [fork] S565 profile-goal-new
+import 'package:opennutritracker/core/domain/usecase/get_kcal_goal_usecase.dart';
+// [/fork]
 // [fork] S301 profile-delete-confirm
 import 'package:opennutritracker/features/profile/presentation/utils/profile_display_name.dart';
 // [/fork]
@@ -55,7 +58,15 @@ class _ManageProfilesScreenState extends State<ManageProfilesScreen> {
       // A Switch from a card can land mid-loop: ask which is active now
       if (!mounted) return;
       try {
-        stats[p.id] = await readProfileStats(db, p);
+        // [fork] S565 profile-goal-new: a profile with no tracked day yet
+        // reads today's goal (G3-7)
+        // stats[p.id] = await readProfileStats(db, p);
+        stats[p.id] = await readProfileStats(
+          db,
+          p,
+          todayGoal: () => locator<GetKcalGoalUsecase>().getKcalGoal(),
+        );
+        // [/fork]
       } catch (_) {
         // A profile whose boxes can not be read shows dashes.
       }

@@ -22,6 +22,10 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 // [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:opennutritracker/core/utils/safe_url_launcher.dart';
+// [fork] S590 S591 fork English for stale strings
+import 'package:opennutritracker/fork/onboarding/onboarding_copy.dart'
+    as fork_copy;
+// [/fork]
 
 class OnboardingIntroPageBody extends StatefulWidget {
   const OnboardingIntroPageBody({
@@ -29,11 +33,17 @@ class OnboardingIntroPageBody extends StatefulWidget {
     required this.setPageContent,
     this.initialAcceptedPolicy = false,
     this.initialAcceptedDataCollection = false,
+    this.onBusy, // [fork] S543
   });
 
   final Function(bool active, bool acceptedDataCollection) setPageContent;
   final bool initialAcceptedPolicy;
   final bool initialAcceptedDataCollection;
+
+  // [fork] S543 intro-busy-start: told while the demo seeds or a backup
+  // restores, so the footer's Start waits too
+  final ValueChanged<bool>? onBusy;
+  // [/fork]
 
   @override
   State<OnboardingIntroPageBody> createState() =>
@@ -58,6 +68,10 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
     _forkPolicyTap.dispose();
     super.dispose();
   }
+  // [/fork]
+
+  // [fork] S543 intro-busy-start
+  void _forkReportBusy() => widget.onBusy?.call(_seedingDemo || _forkRestoring);
   // [/fork]
 
   @override
@@ -106,16 +120,25 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                 ListTile(
                   onTap: () => _togglePolicy(),
                   title: Text.rich(
-                    // [fork] S334: the link is the row's action, not a node
-                    semanticsLabel: S.of(context).readLabel,
+                    // [fork] S334 S591: the link is the row's action, not a
+                    // node; S591 names the policy once
+                    semanticsLabel: fork_copy.policySentence,
                     // [/fork]
                     textAlign: TextAlign.center,
                     TextSpan(
-                      text: S.of(context).readLabel,
+                      // [fork] S543 S591 policy-link-space: the underline began
+                      // on the space before the link; S591: the row named the
+                      // policy twice ("…privacy policy. Privacy policy")
+                      // text: S.of(context).readLabel,
+                      text: fork_copy.policyLead,
+                      // [/fork]
                       style: Theme.of(context).textTheme.bodySmall,
                       children: [
                         TextSpan(
-                          text: ' ${S.of(context).privacyPolicyLabel}',
+                          // [fork] S543 S591 policy-link-space
+                          // text: ' ${S.of(context).privacyPolicyLabel}',
+                          text: fork_copy.policyLink,
+                          // [/fork]
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 // [fork] S502 policy-link-accent: a picked
@@ -133,6 +156,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                           //   },
                           // [/fork]
                         ),
+                        const TextSpan(text: '.'), // [fork] S591
                       ],
                     ),
                   ),
@@ -214,7 +238,11 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                 ),
                 const SizedBox(height: 4.0),
                 Text(
-                  S.of(context).onboardingTryDemoSubtitle,
+                  // [fork] S590 demo-caption: it asked for the policy after
+                  // the tick
+                  // S.of(context).onboardingTryDemoSubtitle,
+                  fork_copy.tryDemoSubtitle(acceptedPolicy: _acceptedPolicy),
+                  // [/fork]
                   style: Theme.of(context).textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),
@@ -236,6 +264,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                   busy: _seedingDemo,
                   onBusy: (busy) {
                     if (mounted) setState(() => _forkRestoring = busy);
+                    if (mounted) _forkReportBusy(); // [fork] S543
                   },
                   // [/fork]
                 ),
@@ -295,6 +324,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
   Future<void> _tryDemo() async {
     if (!_acceptedPolicy) return;
     setState(() => _seedingDemo = true);
+    _forkReportBusy(); // [fork] S543
     try {
       await seedDemoData(DemoSeedOptions.onboarding);
       if (!mounted) return;
@@ -309,6 +339,7 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _seedingDemo = false);
+      _forkReportBusy(); // [fork] S543
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(S.of(context).onboardingTryDemoError)),
       );

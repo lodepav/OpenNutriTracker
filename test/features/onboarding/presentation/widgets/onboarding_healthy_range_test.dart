@@ -256,7 +256,11 @@ void main() {
       // value does, but FeetInchesInput has no validator of its own, so the
       // page has to supply the message.
       final fields = find.byType(TextField);
-      await tester.enterText(fields.at(0), '2');
+      // [fork] S540 half-empty-pair: feet alone is now N ft 0 in, so the
+      // incomplete half is inches without feet
+      // await tester.enterText(fields.at(0), '2');
+      await tester.enterText(fields.at(1), '2');
+      // [/fork]
       await tester.pump();
       expect(
         find.text(l10nEn.onboardingWrongHeightLabel),
@@ -287,7 +291,11 @@ void main() {
       );
 
       final fields = find.byType(TextField);
-      await tester.enterText(fields.at(1), '11');
+      // [fork] S540 half-empty-pair: stones alone is now N st 0 lb, so the
+      // incomplete half is pounds without stones
+      // await tester.enterText(fields.at(1), '11');
+      await tester.enterText(fields.at(2), '11');
+      // [/fork]
       await tester.pump();
       expect(find.text(l10nEn.onboardingWrongWeightLabel), findsNothing);
 
@@ -325,7 +333,11 @@ void main() {
         await tester.pump();
         expect(lastActive, isTrue);
 
-        await tester.enterText(fields.at(3), '10');
+        // [fork] S540 half-empty-pair: stones alone is now N st 0 lb, so the
+        // incomplete half is pounds without stones
+        // await tester.enterText(fields.at(3), '10');
+        await tester.enterText(fields.at(4), '10');
+        // [/fork]
         await tester.pumpAndSettle();
         expect(lastActive, isFalse);
 

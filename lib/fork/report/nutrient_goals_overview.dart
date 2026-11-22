@@ -111,7 +111,8 @@ class _NutrientGoalsOverviewState extends State<NutrientGoalsOverview> {
             child: TextButton.icon(
               onPressed: _edit,
               icon: const Icon(Icons.edit_rounded, size: 18),
-              label: const Text('Edit'),
+              // As the Nutrients page names the same page (G5-13).
+              label: const Text('Edit goals'),
             ),
           ),
           const SizedBox(width: Dimens.spacing4),

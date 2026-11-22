@@ -18,6 +18,8 @@ import 'package:opennutritracker/fork/backup/auto_backup.dart';
 import 'package:opennutritracker/fork/backup/storage_rescue.dart';
 import 'package:opennutritracker/fork/body/measurement_store.dart';
 import 'package:opennutritracker/fork/bulk/photo_meal_memory_store.dart';
+import 'package:opennutritracker/fork/custom_food/serving_mode.dart';
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
@@ -178,6 +180,9 @@ Future<void> fillForkState({
   await DisplayPrefs.setShowWater(true);
   await DisplayPrefs.setShowFasting(true);
   await OwnPortions().add(meal, 'my bowl', 180);
+  await CustomFoodModes().record(CustomFoodModes.keyOf(meal), perServing: true);
+  // Also marks the install's adoption as run.
+  await markDemoProfile(false);
   await RememberedAmounts().remember(meal, 'g', '150');
   await MeasurementStore().addDay(day(-2), {BodyMetric.waist: 90.5});
   await PlanStore().add(

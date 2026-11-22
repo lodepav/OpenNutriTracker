@@ -388,7 +388,11 @@ class WaterTile extends StatelessWidget {
     final palette = paletteOf(context);
     void logWater() => showDialog<void>(
       context: context,
-      builder: (_) => LogWaterDialog(usesImperialUnits: usesImperialUnits),
+      builder: (_) => LogWaterDialog(
+        usesImperialUnits: usesImperialUnits,
+        todayMl: ml,
+        goalMl: goalMl,
+      ),
     );
     String shown(int ml) => usesImperialUnits
         ? '${UnitCalc.mlToFlOz(ml.toDouble()).round()}'

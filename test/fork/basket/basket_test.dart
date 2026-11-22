@@ -86,6 +86,13 @@ void main() {
     expect(pickedLabel('7.5', 'oz'), '7.5 oz');
   });
 
+  test('the energy shown is the rows summed as they are shown', () {
+    // 96.4 + 96.4 is 192.8: the rows read 96 and 96, so the total is 192
+    final items = [_item(96.4), _item(96.4)];
+    expect(basketShownEnergy(items, (kcal) => kcal.round()), 192);
+    expect(basketShownEnergy(const [], (kcal) => kcal.round()), 0);
+  });
+
   test('the basket holds one meal of one day', () {
     final basket = FoodBasket()
       ..add(_item(100), IntakeTypeEntity.lunch, _day)
@@ -402,7 +409,7 @@ void main() {
     );
     expect(find.text('Undo'), findsNothing);
     final button = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Log all 1 to Lunch'),
+      find.widgetWithText(FilledButton, 'Log 1 food to Lunch'),
     );
     expect(button.onPressed, isNotNull);
   });
@@ -525,6 +532,10 @@ void main() {
       await open(tester, filled(PlanMode.once), plans);
       expect(find.textContaining('Log all'), findsNothing);
       expect(find.textContaining('1 to plan'), findsOneWidget);
+      // one name for what the planning basket holds
+      expect(find.text('To plan'), findsOneWidget);
+      expect(find.text('Basket'), findsNothing);
+      expect(find.text('Clear the foods to plan'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('basket-plan')));
       await tester.pumpAndSettle();

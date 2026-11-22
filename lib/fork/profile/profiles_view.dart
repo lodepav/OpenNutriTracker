@@ -25,6 +25,9 @@ typedef ProfileStats = ({
   double? kcalGoal,
   double? trendKg,
   int daysLogged,
+  // the first day with food, which imported history puts before the
+  // profile was made
+  DateTime? firstDay,
 });
 
 /// The delete confirm for [name]: true on Delete. [daysLogged] from its
@@ -89,22 +92,41 @@ ProfileStats profileStats(
     kcalGoal: past.lastOrNull?.calorieGoal,
     trendKg: trend.lastOrNull?.weightKg,
     daysLogged: past.where((d) => d.caloriesTracked > 0).length,
+    firstDay: past.where((d) => d.caloriesTracked > 0).firstOrNull?.day,
   );
 }
 
 /// [profileStats] for [profile]: the open boxes when it is the active one,
-/// else its own, opened for the read and closed after.
+/// else its own, opened for the read and closed after. [todayGoal] is the
+/// active profile's goal today, for one with no tracked day.
 Future<ProfileStats> readProfileStats(
   HiveDBProvider db,
   ProfileEntity profile, {
   DateTime Function() clock = DateTime.now,
+  Future<double> Function()? todayGoal,
 }) async {
   if (profile.id == db.activeProfileId) {
-    return profileStats(
+    final stats = profileStats(
       db.userBox.get(_userKey),
       db.trackedDayBox.values,
       db.weightLogBox.values,
       clock(),
+    );
+    // Onboarded today, no day tracked yet: today's goal, as Home shows it
+    // [todayGoal], rather than "—" (G3-7)
+    if (stats.kcalGoal != null || todayGoal == null) return stats;
+    final double goal;
+    try {
+      goal = await todayGoal();
+    } catch (_) {
+      return stats; // the other figures still show; the goal reads "—"
+    }
+    return (
+      goal: stats.goal,
+      kcalGoal: goal,
+      trendKg: stats.trendKg,
+      daysLogged: stats.daysLogged,
+      firstDay: stats.firstDay,
     );
   }
   final suffix = profile.boxSuffix;
@@ -224,8 +246,14 @@ class _ProfileCard extends StatelessWidget {
     final s = S.of(context);
     final stats = this.stats;
     final name = profileDisplayName(context, profile);
+    // "since" the earlier of the profile and its history, so it doesn't
+    // read "since Oct 2026" beside 365 days logged (G3-12)
+    final first = stats?.firstDay;
+    final start = first != null && first.isBefore(profile.createdAt)
+        ? first
+        : profile.createdAt;
     final since =
-        'since ${DateFormat.yMMM(Localizations.localeOf(context).toLanguageTag()).format(profile.createdAt)}';
+        'since ${DateFormat.yMMM(Localizations.localeOf(context).toLanguageTag()).format(start)}';
     final about = [?stats?.goal?.getName(context), since].join(' · ');
     // A node of its own, "3097, kcal goal": loose, the figures' words were
     // the card's own label, read before the name.
@@ -235,6 +263,8 @@ class _ProfileCard extends StatelessWidget {
           children: [
             Text(
               value,
+              // a dash is read out as a symbol (A5)
+              semanticsLabel: value == '—' ? 'not known yet' : null,
               style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             Text(
@@ -288,7 +318,7 @@ class _ProfileCard extends StatelessWidget {
                                     color: textAccent(
                                       context,
                                     ).withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
+                                    borderRadius: Dimens.borderRadiusS,
                                   ),
                                   child: Text(
                                     s.profileActiveLabel,

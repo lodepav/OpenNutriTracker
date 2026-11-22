@@ -7,6 +7,8 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/widgets/log_water_dialog.dart';
 
+import 'package:opennutritracker/fork/display/contrast.dart';
+
 import '../../helpers/ux_checks.dart';
 
 // Log water: Undo last says what it removed and closes, so OK can't log the
@@ -75,7 +77,11 @@ Widget _launcher({bool imperial = false}) => Builder(
   builder: (context) => ElevatedButton(
     onPressed: () => showDialog<void>(
       context: context,
-      builder: (_) => LogWaterDialog(usesImperialUnits: imperial),
+      builder: (_) => LogWaterDialog(
+        usesImperialUnits: imperial,
+        todayMl: 1450,
+        goalMl: 2000,
+      ),
     ),
     child: const Text('Open'),
   ),
@@ -106,6 +112,40 @@ void main() {
     expect(home.added, isEmpty);
   });
 
+  testWidgets('names the drink logged last, not a later-timed one', (
+    tester,
+  ) async {
+    locator.unregister<HomeBloc>();
+    home = _Home(
+      _loaded([
+        WaterIntakeEntity(
+          id: 'sample',
+          dateTime: DateTime(2026, 11, 21, 21),
+          amountMl: 400,
+        ),
+        WaterIntakeEntity(
+          id: 'water-200',
+          dateTime: DateTime(2026, 11, 21, 10),
+          amountMl: 300,
+        ),
+        WaterIntakeEntity(
+          id: 'water-100',
+          dateTime: DateTime(2026, 11, 21, 9),
+          amountMl: 500,
+        ),
+      ]),
+    );
+    locator.registerSingleton<HomeBloc>(home);
+    await pumpOnPhone(tester, _launcher(), textScale: 1);
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.bySemanticsIdentifier('log-water-undo'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Removed 300 ml · today 900 ml'), findsOneWidget);
+  });
+
   testWidgets('in fl oz with imperial units', (tester) async {
     await pumpOnPhone(tester, _launcher(imperial: true), textScale: 1);
     await tester.tap(find.text('Open'));
@@ -115,6 +155,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Removed 8 fl oz · today 41 fl oz'), findsOneWidget);
+  });
+
+  testWidgets('says today so far, and the amount reads at 4.5:1', (
+    tester,
+  ) async {
+    // a pale accent of the user's choosing, which the readout drew as is
+    await pumpOnPhone(
+      tester,
+      Builder(
+        builder: (context) => Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: const Color(0xFFF2C94C)),
+          ),
+          child: _launcher(),
+        ),
+      ),
+      textScale: 1,
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today so far: 1450 of 2000 ml'), findsOneWidget);
+    final readout = find.text('Add 250 ml');
+    final color = tester.widget<Text>(readout).style!.color!;
+    final dialog = Theme.of(tester.element(readout)).dialogTheme;
+    expect(
+      contrastRatio(color, dialog.backgroundColor!),
+      greaterThanOrEqualTo(4.5),
+    );
   });
 
   testWidgets('the title wraps at 200%', (tester) async {

@@ -3,6 +3,10 @@ import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/features/onboarding/domain/entity/user_activity_selection_entity.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+// [fork] S592 S593 fork English for stale strings
+import 'package:opennutritracker/fork/onboarding/onboarding_copy.dart'
+    as fork_copy;
+// [/fork]
 
 class OnboardingActivityPageBody extends StatefulWidget {
   final Function(bool active, UserActivitySelectionEntity? selectedActivity)
@@ -39,24 +43,40 @@ class _OnboardingActivityPageBodyState
       case UserActivitySelectionEntity.sedentary:
         return S.of(context).palSedentaryLabel;
       case UserActivitySelectionEntity.lowActive:
-        return S.of(context).palLowLActiveLabel;
+        // [fork] S592 pal-labels: sentence case, as the app's other labels
+        // return S.of(context).palLowLActiveLabel;
+        return fork_copy.palLowActiveLabel;
+        // [/fork]
       case UserActivitySelectionEntity.active:
         return S.of(context).palActiveLabel;
       case UserActivitySelectionEntity.veryActive:
-        return S.of(context).palVeryActiveLabel;
+        // [fork] S592 pal-labels
+        // return S.of(context).palVeryActiveLabel;
+        return fork_copy.palVeryActiveLabel;
+        // [/fork]
     }
   }
 
   String _description(UserActivitySelectionEntity activity) {
     switch (activity) {
+      // [fork] S593 pal-examples: "e.g." on two of four; one form for all
+      // case UserActivitySelectionEntity.sedentary:
+      //   return S.of(context).palSedentaryDescriptionLabel;
+      // case UserActivitySelectionEntity.lowActive:
+      //   return S.of(context).palLowActiveDescriptionLabel;
+      // case UserActivitySelectionEntity.active:
+      //   return S.of(context).palActiveDescriptionLabel;
+      // case UserActivitySelectionEntity.veryActive:
+      //   return S.of(context).palVeryActiveDescriptionLabel;
       case UserActivitySelectionEntity.sedentary:
-        return S.of(context).palSedentaryDescriptionLabel;
+        return fork_copy.palSedentaryDescription;
       case UserActivitySelectionEntity.lowActive:
-        return S.of(context).palLowActiveDescriptionLabel;
+        return fork_copy.palLowActiveDescription;
       case UserActivitySelectionEntity.active:
-        return S.of(context).palActiveDescriptionLabel;
+        return fork_copy.palActiveDescription;
       case UserActivitySelectionEntity.veryActive:
-        return S.of(context).palVeryActiveDescriptionLabel;
+        return fork_copy.palVeryActiveDescription;
+      // [/fork]
     }
   }
 

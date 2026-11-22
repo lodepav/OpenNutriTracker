@@ -183,6 +183,11 @@ void main() {
       expect(find.textContaining(_notMet), findsNothing);
       expect(find.text('Days left out'), findsNothing);
       expect(find.textContaining('every kg'), findsNothing);
+      // At first run the estimate's settings are folded (G1-24).
+      await tester.tap(find.text('Fine-tune the estimate'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(_notMet), findsNothing);
+      expect(find.textContaining('every kg'), findsNothing);
       expect(find.text('Count every lb as 3500 kcal'), findsOneWidget);
     });
 

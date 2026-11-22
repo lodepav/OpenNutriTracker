@@ -75,7 +75,16 @@ class _FeetInchesInputState extends State<FeetInchesInput> {
       return;
     }
     // [/fork]
-    widget.onChangedCm(ValueValidator.parseFeetInchesHeightInCm(feet, inches));
+    // [fork] S540 half-empty-pair: "5 ft" with inches left empty is 5 ft 0 in
+    // widget.onChangedCm(ValueValidator.parseFeetInchesHeightInCm(feet, inches));
+    final empty = _inchesController.text.trim().isEmpty;
+    widget.onChangedCm(
+      ValueValidator.parseFeetInchesHeightInCm(
+        feet,
+        inches ?? (feet != null && empty ? 0 : null),
+      ),
+    );
+    // [/fork]
   }
 
   @override

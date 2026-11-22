@@ -9,6 +9,7 @@ import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/add_meal/domain/meal_photo_interpreter.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_photo_encoder.dart';
+import 'package:opennutritracker/fork/add/chosen_chips.dart';
 import 'package:opennutritracker/fork/leftovers/ai_leftovers.dart';
 import 'package:opennutritracker/fork/leftovers/meal_groups.dart';
 import 'package:opennutritracker/fork/leftovers/meal_photo_cache.dart';
@@ -278,19 +279,23 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                 ),
               ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final MapEntry(key: label, value: fraction)
-                    in leftoverFractions.entries)
-                  ChoiceChip(
-                    label: Text(label),
-                    selected: _fraction == fraction,
-                    onSelected: _reading
-                        ? null
-                        : (_) => _pickFraction(fraction),
-                  ),
-              ],
+            // the chosen fraction in the accent; the theme's fill was the rest's
+            chosenChips(
+              context,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  for (final MapEntry(key: label, value: fraction)
+                      in leftoverFractions.entries)
+                    ChoiceChip(
+                      label: Text(label),
+                      selected: _fraction == fraction,
+                      onSelected: _reading
+                          ? null
+                          : (_) => _pickFraction(fraction),
+                    ),
+                ],
+              ),
             ),
             for (final intake in widget.intakes)
               Padding(
@@ -307,7 +312,8 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            '${_formatShown(intake.id, intake.amount)} → '
+                            '${_formatShown(intake.id, intake.amount)} '
+                            '${_shown[intake.id]!.unit} → '
                             '${_formatShown(intake.id, amounts[intake.id]!)} '
                             '${_shown[intake.id]!.unit}',
                             style: Theme.of(context).textTheme.bodySmall,

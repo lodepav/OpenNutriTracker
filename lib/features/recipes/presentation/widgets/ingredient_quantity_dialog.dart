@@ -79,12 +79,13 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
 
   // [fork] S300 ingredient-amount
   // "1" only where the default unit is a serving that converts to grams.
-  String _forkServingPrefill() =>
-      widget.initialUnit == null &&
-              widget.meal.hasServingValues &&
-              (widget.meal.servingQuantity ?? 0) > 0
-          ? '1'
-          : '';
+  // S565 ingredient-prefill-100: else 100 g or ml, so Add never meets an
+  // empty field (G3-12)
+  String _forkServingPrefill() {
+    if (widget.initialUnit != null) return '';
+    if (!widget.meal.hasServingValues) return '100';
+    return (widget.meal.servingQuantity ?? 0) > 0 ? '1' : '';
+  }
 
   /// The typed amount's energy and macros, or nothing while it can not be
   /// worked out (no amount, no energy figure, a serving without a weight).
@@ -167,7 +168,11 @@ class _IngredientQuantitySheetState extends State<_IngredientQuantitySheet> {
     final palette = isDark ? AppPalette.dark : AppPalette.light;
     final fieldBorder = OutlineInputBorder(
       borderRadius: Dimens.borderRadiusS,
-      borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+      // [fork] S568 recipes-audit-p3: the theme's 3:1 field edge (S552),
+      // not the 1.1:1 hairline (A4)
+      // borderSide: BorderSide(color: palette.border, width: Dimens.hairline),
+      borderSide: BorderSide(color: palette.textMuted),
+      // [/fork]
     );
     return Padding(
       padding: EdgeInsets.only(bottom: sheetBottomInset(context)),

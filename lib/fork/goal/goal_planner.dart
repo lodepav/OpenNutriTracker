@@ -492,6 +492,26 @@ PhasePlan editedPlan(
   var fromKg = nowKg + rate * daysLeft / 7;
   final target = draft.targetKg;
   if (target != null && (fromKg - target) * (nowKg - target) <= 0) {
+    // Reached by this week's end at its pace: the goal ends with this week,
+    // not a whole week's block after it.
+    if (losing && plan.phases[index].kind == draft.kind) {
+      final week = kept.removeLast();
+      return PhasePlan(
+        start: plan.start,
+        startKg: plan.startKg,
+        targetKg: target,
+        extensions: plan.extensions,
+        phases: [
+          ...kept,
+          DietPhase(
+            kind: week.kind,
+            kgPerWeek: week.kgPerWeek,
+            weeks: week.weeks,
+            untilKg: target,
+          ),
+        ],
+      );
+    }
     fromKg = nowKg;
   }
   final ahead = draft

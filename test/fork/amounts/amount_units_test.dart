@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_portion_entity.dart';
 import 'package:opennutritracker/fork/amounts/amount_units.dart';
 import 'package:opennutritracker/fork/amounts/own_portions.dart';
 
@@ -39,6 +40,29 @@ void main() {
           ),
         ),
         ['g/ml'],
+      );
+    });
+
+    test('a portion weighing the same as one before it shows once, unless '
+        'the amount is in it', () {
+      // G2-13: "Serving · 12.7 oz" beside "small · 12.7 oz"
+      final coffee = bread(
+        portions: const [
+          MealPortionEntity(label: '1 cup', gramWeight: 360, localized: true),
+          MealPortionEntity(label: '1 small', gramWeight: 360, localized: true),
+          MealPortionEntity(label: '1 tbsp', gramWeight: 32, localized: true),
+        ],
+      );
+      expect(units(amountUnitOptions(coffee, selected: 'g', imperial: false)), [
+        'serving',
+        'serving#2',
+        'g',
+      ]);
+      expect(
+        units(
+          amountUnitOptions(coffee, selected: 'serving#1', imperial: false),
+        ),
+        ['serving#1', 'serving#2', 'g'],
       );
     });
 

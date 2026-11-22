@@ -5,10 +5,17 @@ import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:logging/logging.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
+    show refreshGoals;
+import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/units/weight_text.dart';
 
@@ -53,11 +60,15 @@ List<({String label, double kcal})>? checkInChangeParts(
 
 /// The weekly check-ins as accepted, newest first: the target each set,
 /// how far it moved from the one before, and the expenditure and proposal
-/// it came from. A row whose move can be split opens the split.
+/// it came from. A row whose move can be split opens the split. The latest
+/// can be undone, which puts back the target from before it.
 class CheckInHistoryScreen extends StatefulWidget {
   final AdaptiveStore store;
 
-  const CheckInHistoryScreen({super.key, required this.store});
+  /// Undoes the latest check-in; the locator's when null.
+  final AdaptiveService? service;
+
+  const CheckInHistoryScreen({super.key, required this.store, this.service});
 
   @override
   State<CheckInHistoryScreen> createState() => _CheckInHistoryScreenState();
@@ -71,6 +82,67 @@ class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
   void didUpdateWidget(CheckInHistoryScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.store != oldWidget.store) _history = widget.store.history();
+  }
+
+  bool _undoing = false;
+
+  /// Asks, then drops the latest check-in the way the snackbar's Undo does,
+  /// so the automatic one doesn't take it again.
+  Future<void> _undoLatest(CheckInRecord latest, CheckInRecord? before) async {
+    final day = DateFormat.MMMd(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).format(latest.date);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Undo the check-in of $day?'),
+        content: Text(
+          before == null
+              ? 'Your calorie goal goes back to what it was before your '
+                    'first check-in.'
+              : 'Your daily target goes back to '
+                    '${energyText(context, before.acceptedKcal)}. The '
+                    'check-in comes due again on Home.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: destructiveFilledStyle(context),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Undo check-in'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted || _undoing) return;
+    setState(() => _undoing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      // Read again: the list on screen may be older than the store.
+      final all = await widget.store.history();
+      await (widget.service ?? AdaptiveService.fromLocator()).restoreCheckIns(
+        all.isEmpty ? all : all.sublist(0, all.length - 1),
+      );
+      AutoCheckIn.accepted.value = null;
+      await refreshGoals();
+      if (!mounted) return;
+      setState(() {
+        _history = widget.store.history();
+      });
+      messenger.showSnackBar(
+        SnackBar(content: Text('Check-in of $day undone.')),
+      );
+    } catch (error, stackTrace) {
+      Logger('CheckInHistory').severe('Undo failed', error, stackTrace);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Not saved. Try again.')),
+      );
+    } finally {
+      if (mounted) setState(() => _undoing = false);
+    }
   }
 
   @override
@@ -102,14 +174,24 @@ class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
           ),
           children: [
             for (var i = all.length - 1; i >= 0; i--)
-              _row(context, all[i], i == 0 ? null : all[i - 1]),
+              _row(
+                context,
+                all[i],
+                i == 0 ? null : all[i - 1],
+                latest: i == all.length - 1,
+              ),
           ],
         );
       },
     ),
   );
 
-  Widget _row(BuildContext context, CheckInRecord r, CheckInRecord? before) {
+  Widget _row(
+    BuildContext context,
+    CheckInRecord r,
+    CheckInRecord? before, {
+    required bool latest,
+  }) {
     final theme = Theme.of(context);
     final change = before == null ? null : r.acceptedKcal - before.acceptedKcal;
     final edited = (r.acceptedKcal - r.proposedKcal).abs() >= 1;
@@ -144,13 +226,39 @@ class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
           ? null
           : () => _showParts(context, before!, r, parts),
     );
+    final row = parts == null
+        ? tile
+        : MergeSemantics(
+            child: Semantics(hint: 'Shows why it moved', child: tile),
+          );
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: AppCard(
-        child: parts == null
-            ? tile
-            : MergeSemantics(
-                child: Semantics(hint: 'Shows why it moved', child: tile),
+        child: !latest
+            ? row
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  row,
+                  // Outside the row's merged node, so TalkBack finds it.
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: 8,
+                        bottom: 4,
+                      ),
+                      child: TextButton.icon(
+                        key: const ValueKey('undo-latest-check-in'),
+                        onPressed: _undoing
+                            ? null
+                            : () => _undoLatest(r, before),
+                        icon: const Icon(Icons.undo_rounded),
+                        label: const Text('Undo this check-in'),
+                      ),
+                    ),
+                  ),
+                ],
               ),
       ),
     );

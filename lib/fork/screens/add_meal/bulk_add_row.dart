@@ -473,7 +473,8 @@ extension _BulkAddRow on _BulkAddScreenState {
           onPressed: quantity == null ? null : () => step(up: false),
           icon: const Icon(Icons.remove),
         ),
-        const SizedBox(width: 4),
+        // 8 dp between the steppers and the amount (A1)
+        const SizedBox(width: 8),
         Flexible(
           child: OutlinedButton(
             key: ValueKey('bulk-add-unit-$index'),
@@ -497,7 +498,7 @@ extension _BulkAddRow on _BulkAddScreenState {
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: 8),
         IconButton.filledTonal(
           key: ValueKey('bulk-add-more-$index'),
           tooltip: 'More ${shownRowTitle(row)}',
@@ -808,7 +809,8 @@ class _RowAmountSheetState extends State<_RowAmountSheet> {
                 child: OutlinedButton.icon(
                   key: const ValueKey('bulk-add-other-match'),
                   onPressed: other,
-                  icon: const Icon(Icons.swap_horiz_rounded),
+                  // not ⇄, which marks "= 1 × Serving" in this sheet
+                  icon: const Icon(Icons.manage_search_rounded),
                   label: const Text('Other match'),
                 ),
               ),
