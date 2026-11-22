@@ -288,6 +288,43 @@ void main() {
     expect(_fill(tester, discard), _error(tester, discard));
   });
 
+  testWidgets('after a nameless Save, later edits keep the scroll', (
+    tester,
+  ) async {
+    final compute = ComputeRecipeNutritionUseCase();
+    getIt.registerFactory<RecipeBuilderBloc>(
+      () => RecipeBuilderBloc(compute, SaveRecipeUseCase(recipes, compute)),
+    );
+    tester.view.physicalSize = const Size(400, 500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await pump(tester, const Scaffold());
+    navigator.currentState!.push(
+      MaterialPageRoute<void>(
+        settings: RouteSettings(
+          arguments: RecipeBuilderArguments(existing: _bowl),
+        ),
+        builder: (_) => const RecipeBuilderScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, '');
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Save Recipe'));
+    await tester.pumpAndSettle();
+    final list = find.byType(Scrollable).first;
+    ScrollPosition position() => tester.state<ScrollableState>(list).position;
+    expect(position().pixels, 0);
+
+    await tester.drag(list, const Offset(0, -200));
+    await tester.pumpAndSettle();
+    final scrolled = position().pixels;
+    expect(scrolled, greaterThan(0));
+    await tester.enterText(find.byType(TextField).last, '3');
+    await tester.pumpAndSettle();
+    expect(position().pixels, scrolled, reason: 'the name error scrolls once');
+  });
+
   group('a deleted custom food row', () {
     setUpAll(() {
       Hive.init('.');

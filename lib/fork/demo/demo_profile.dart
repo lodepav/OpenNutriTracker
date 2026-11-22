@@ -63,6 +63,11 @@ Future<void> syncDemoFlag() async {
   await locator<AddConfigUsecase>().setConfigIsDemoData(mark == true);
 }
 
+/// Whether the active profile was marked as no longer a demo, as after a
+/// restore: leaving the demo then must not wipe it.
+Future<bool> activeProfileLeftDemo() async =>
+    (await AdaptiveStore.openActiveBox()).get(_key) == false;
+
 /// Run after a restore: it wrote real data into the active profile, and
 /// leaving a demo wipes the profile, so the profile is no longer a demo,
 /// whatever the backup was.

@@ -53,6 +53,15 @@ void main() {
     await switcher.switchProfile(demo);
     await syncDemoFlag();
     expect(await banner(), isFalse, reason: 'and it stays so after a switch');
+    // The banner on screen was read before the restore: leaving the demo
+    // from it must not wipe the restored profile
+    final restoredName = locator<GetProfilesUsecase>().getActiveProfile()!.name;
+    await exitDemoMode();
+    expect(
+      locator<GetProfilesUsecase>().getActiveProfile()!.name,
+      restoredName,
+      reason: 'a restored profile is not reset by leaving the demo',
+    );
     await markDemoProfile(true);
     await syncDemoFlag();
 

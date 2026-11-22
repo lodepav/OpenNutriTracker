@@ -350,6 +350,13 @@ Future<void> _wipeActiveProfileAndDemoContent() async {
 Future<void> exitDemoMode() async {
   final active = locator<GetProfilesUsecase>().getActiveProfile();
 
+  // [fork] S606 demo-exit-after-restore: a banner still up after a restore
+  // must not wipe the restored profile
+  if (await activeProfileLeftDemo()) {
+    await syncDemoFlag();
+    return;
+  }
+  // [/fork]
   await _wipeActiveProfileAndDemoContent();
   // [fork] S563 demo-per-profile: the profile is no longer the demo
   await markDemoProfile(false);
