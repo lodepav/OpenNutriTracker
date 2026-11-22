@@ -176,9 +176,31 @@ class CheckIn {
   });
 
   /// Whether [proposedTargetKcal] is under [recommendedFloorKcal].
-  bool get belowRecommendedFloor {
+  bool get belowRecommendedFloor => belowFloor(proposedTargetKcal);
+
+  /// Whether [kcal] is under [recommendedFloorKcal], Home's rule for its
+  /// low-target card.
+  bool belowFloor(double kcal) {
     final floor = recommendedFloorKcal;
-    return floor != null && proposedTargetKcal < floor;
+    return floor != null && kcal < floor;
+  }
+
+  /// The pace, kg a week, a target of [targetKcal] in place of
+  /// [proposedTargetKcal] gives: the goal's, moved by the difference at
+  /// [kcalPerKg]; null without it.
+  double? paceAt(double targetKcal) {
+    final perKg = kcalPerKg;
+    if (perKg == null || perKg <= 0) return null;
+    return goalRateKgPerWeek + (targetKcal - proposedTargetKcal) * 7 / perKg;
+  }
+
+  /// Days from [trendKg] to [targetWeightKg] at [paceAt] [targetKcal];
+  /// null without them or where that pace leads away.
+  int? daysToTargetAt(double targetKcal) {
+    final now = trendKg;
+    final pace = paceAt(targetKcal);
+    if (now == null || pace == null) return null;
+    return daysToTarget(now, targetWeightKg, pace / 7);
   }
 
   /// MacroFactor's data rule for the week: 4 logged days and a weigh-in,

@@ -239,6 +239,7 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
                   ),
                   child: const Text('Compare'),
                 ),
+              if (photos.length > 1) const SizedBox(width: Dimens.spacing8),
               TextButton.icon(
                 key: const ValueKey('photo-add'),
                 onPressed: _add,

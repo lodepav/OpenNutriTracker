@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
@@ -14,8 +15,12 @@ enum HostedKeyVerdict {
   /// The provider refused the key (401); it is not saved.
   refused,
 
-  /// Nothing answered in time; the key is saved unchecked.
+  /// The network failed (no route, no DNS); the key is saved unchecked.
   offline,
+
+  /// The check failed for another reason (a timeout, TLS); saved unchecked.
+  /// A timeout is not called offline: an online phone gets one too.
+  failed,
 
   /// The provider answered something else (a 403 is permission or region,
   /// not a mistyped key; a 429, a 5xx); saved unchecked.
@@ -31,6 +36,21 @@ class HostedKeyResult {
 
   const HostedKeyResult(this.verdict, [this.message]);
 }
+
+/// The hosted providers whose saved key was not checked, set by the AI
+/// dialog on each save.
+// shortcut: in memory, so after a restart the row reads "On — <provider>"
+// again; keep it in the credential store if that misleads.
+final hostedKeysNotChecked = <AiProvider>{};
+
+/// The AI row's [row] text, with the unchecked key said while AI is [on].
+String? withKeyCheckNote(
+  String? row, {
+  required bool on,
+  required AiProvider? provider,
+}) => row != null && on && hostedKeysNotChecked.contains(provider)
+    ? '$row, key not checked'
+    : row;
 
 /// The cheapest request each hosted provider answers only with a valid key.
 /// OpenRouter's model list is public, so its key route is asked instead.
@@ -68,9 +88,12 @@ Future<HostedKeyResult> checkHostedKey(
         .send(hostedKeyCheckRequest(provider, key))
         .then(http.Response.fromStream)
         .timeout(timeout);
-  } catch (_) {
-    // Not bound: a socket error can carry the request, and the request carries the key.
+    // Neither bound: a socket error can carry the request, and the request
+    // carries the key. http's IOClient errors implement SocketException.
+  } on SocketException {
     return const HostedKeyResult(HostedKeyVerdict.offline);
+  } catch (_) {
+    return const HostedKeyResult(HostedKeyVerdict.failed);
   }
   if (response.statusCode == 200) {
     return const HostedKeyResult(HostedKeyVerdict.checked);

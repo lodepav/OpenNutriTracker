@@ -82,6 +82,20 @@ String? measurementError(
   return 'Enter $name between $low and $high ${_unitOf(metric, imperial)}';
 }
 
+/// Why the card shows no change: [series] entries of the metric, but
+/// fewer than two of them, [inRange], in the last [rangeDays] days; null
+/// when there is a change to show or only one entry ever.
+String? measurementRangeHint({
+  required int series,
+  required int inRange,
+  required int rangeDays,
+}) {
+  if (series < 2 || inRange > 1) return null;
+  final count = inRange == 0 ? 'No measurements' : '1 measurement';
+  return '$count in the last $rangeDays days. '
+      'Pick a longer range above to see the change.';
+}
+
 /// The Add measurements dialog, its day saved to [store], with Undo for
 /// what it replaced; the first metric saved, or null when cancelled.
 Future<BodyMetric?> addMeasurements(
@@ -312,6 +326,13 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
                 'Latest (${_date(series.last.date)})',
                 _text(metric, series.last.value),
               ),
+            if (measurementRangeHint(
+                  series: series.length,
+                  inRange: inRange.length,
+                  rangeDays: widget.rangeDays,
+                )
+                case final hint?)
+              Text(hint, style: theme.textTheme.bodySmall),
             if (inRange.length > 1)
               _row(
                 'Change, last ${widget.rangeDays} days',

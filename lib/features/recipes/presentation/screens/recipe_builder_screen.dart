@@ -30,6 +30,10 @@ import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [fork] S273 recipe-photo-evict
 import 'package:opennutritracker/fork/display/sized_file_image.dart';
 // [/fork]
+// [fork] S437 builder-discard-red
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
+// [/fork]
 
 class RecipeBuilderArguments {
   final RecipeEntity? existing;
@@ -402,6 +406,10 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
             child: Text(s.dialogCancelLabel),
           ),
           FilledButton(
+            // [fork] S437 builder-discard-red: it loses the work, as a
+            // delete does (H3)
+            style: destructiveFilledStyle(ctx),
+            // [/fork]
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(s.discardChangesConfirmLabel),
           ),

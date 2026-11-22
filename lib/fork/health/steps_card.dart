@@ -346,7 +346,11 @@ class _GoalDialogState extends State<_GoalDialog> {
       controller: _field,
       autofocus: true,
       keyboardType: TextInputType.number,
-      decoration: InputDecoration(suffixText: 'steps', errorText: _error),
+      decoration: InputDecoration(
+        suffixText: 'steps',
+        errorText: _error,
+        errorMaxLines: 3,
+      ),
       onChanged: (_) {
         if (_error != null) setState(() => _error = null);
       },

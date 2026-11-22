@@ -249,7 +249,8 @@ void main() {
     expect(bar('Fibre'), AppPalette.light.textMuted);
     expect(bar('Energy'), AppPalette.light.textMuted);
     expect(bar('Sugars'), scheme.error);
-    expect(bar('Saturated fat'), AppPalette.light.textMuted);
+    // Under its limit: green.
+    expect(bar('Saturated fat'), AppPalette.light.accent);
     expect(find.textContaining('· over the limit'), findsOneWidget);
     expect(find.textContaining('· reached'), findsNothing);
     expect(find.textContaining(goalStandingKey), findsOneWidget);

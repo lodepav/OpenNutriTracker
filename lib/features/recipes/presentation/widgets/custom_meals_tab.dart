@@ -18,6 +18,11 @@ import 'package:opennutritracker/features/meal_detail/meal_detail_screen.dart';
 import 'package:opennutritracker/fork/recipe/recipe_list.dart' show macroSpans;
 import 'package:opennutritracker/fork/units/energy_text.dart';
 // [/fork]
+// [fork] S438 custom-food-delete-undo
+import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
+// [/fork]
 
 /// Embeddable list of user-created custom meals (formerly the body of
 /// CustomMealsScreen in Settings). Hosted inside RecipesPage's TabBarView.
@@ -243,30 +248,49 @@ class CustomMealsTab extends StatelessWidget {
 
   Future<void> _confirmDelete(BuildContext context, MealEntity meal) async {
     final bloc = context.read<CustomMealsBloc>();
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.of(context).customMealsDeleteConfirmTitle),
-        // [fork] S142 keep-history
-        content: const Text(
-          'Past diary entries logged from it will be kept.',
-        ),
-        // [/fork]
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(S.of(context).dialogCancelLabel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(S.of(context).dialogDeleteLabel),
-          ),
-        ],
-      ),
+    // [fork] S438 custom-food-delete-undo: the recipe delete's confirm, by
+    // name and in red, and an Undo bar that writes the stored rows back
+    // (H3, H4)
+    // final confirmed = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: Text(S.of(context).customMealsDeleteConfirmTitle),
+    //     content: Text(S.of(context).customMealsDeleteConfirmContent),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(false),
+    //         child: Text(S.of(context).dialogCancelLabel),
+    //       ),
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(true),
+    //         child: Text(S.of(context).dialogDeleteLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    // if (confirmed == true) {
+    //   bloc.add(DeleteCustomMealEvent(meal.code ?? meal.name ?? ''));
+    // }
+    final key = _keyFor(meal);
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await confirmDeleteCustomFood(context, meal.name ?? '')) return;
+    final stored = locator<CustomMealDataSource>()
+        .getAllCustomMeals()
+        .where((m) => (m.code ?? m.name) == key)
+        .toList();
+    bloc.add(DeleteCustomMealEvent(key));
+    // The bar waits for the delete, so Undo cannot run before it
+    final after = await bloc.stream.firstWhere(
+      (s) => s is CustomMealsLoadedState || s is CustomMealsFailedState,
     );
-    if (confirmed == true) {
-      bloc.add(DeleteCustomMealEvent(meal.code ?? meal.name ?? ''));
-    }
+    if (after is! CustomMealsLoadedState) return;
+    showCustomFoodDeleted(
+      messenger,
+      meal.name ?? '',
+      stored,
+      onRestored: () => bloc.add(LoadCustomMealsEvent()),
+    );
+    // [/fork]
   }
 
   /// Two-step flow: pick the partner to merge with, then choose which of

@@ -18,6 +18,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart';
 import 'package:opennutritracker/fork/adaptive/auto_check_in.dart';
+import 'package:opennutritracker/fork/adaptive/check_in.dart';
+import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/planner_screen.dart';
@@ -163,7 +165,7 @@ void main() {
           unit: 'kcal',
         ),
         "Today's goal is now 2738 kcal, from 2988 "
-        '(activity is now part of the target)',
+        '(activity no longer added)',
       );
       expect(
         checkInDoneText(
@@ -193,7 +195,7 @@ void main() {
       await _open(tester, _service(store));
 
       expect(find.text('Keep 2738 kcal'), findsOneWidget);
-      expect(find.text("Today's goal: 2988 → 2738 kcal"), findsOneWidget);
+      expect(find.text("Keep: today's goal 2988 → 2738 kcal"), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('check-in-keep')));
       await tester.pumpAndSettle();
@@ -202,7 +204,7 @@ void main() {
       expect(
         find.text(
           "Today's goal is now 2738 kcal, from 2988 "
-          '(activity is now part of the target)',
+          '(activity no longer added)',
         ),
         findsOneWidget,
       );
@@ -312,6 +314,147 @@ void main() {
       tester.getTopLeft(arrival).dx,
       tester.getTopLeft(find.text('Weigh-ins')).dx,
     );
+  });
+
+  test('a check-in says what a target typed in place of its own does', () {
+    const checkIn = CheckIn(
+      averageIntakeKcal: 2000,
+      loggedDays: 7,
+      weighIns: 4,
+      trendKg: 85,
+      weekChangeKg: -0.5,
+      expenditureKcal: 3000,
+      baseKcal: 3000,
+      uncappedTargetKcal: 2500,
+      proposedTargetKcal: 2500,
+      daysToTargetAtGoal: 70,
+      daysToTargetAtTrend: 70,
+      goalRateKgPerWeek: -0.5,
+      targetWeightKg: 80,
+      kcalPerKg: 7000,
+      recommendedFloorKcal: 1500,
+    );
+    expect(checkIn.paceAt(2500), -0.5);
+    // 500 kcal less a day is 0.5 kg more a week at 7000 a kg.
+    expect(checkIn.paceAt(2000), closeTo(-1.0, 1e-9));
+    expect(checkIn.daysToTargetAt(2500), daysToTarget(85, 80, -0.5 / 7));
+    expect(checkIn.daysToTargetAt(2000), daysToTarget(85, 80, -1.0 / 7));
+    // A target that gains leads away from a target below.
+    expect(checkIn.daysToTargetAt(3600), isNull);
+    expect(checkIn.belowFloor(1499), isTrue);
+    expect(checkIn.belowFloor(1500), isFalse);
+  });
+
+  group('a daily target typed in', () {
+    setUp(() {
+      locator.registerSingleton<GetKcalGoalUsecase>(_Goal());
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+    });
+    tearDown(() => locator.unregister<GetKcalGoalUsecase>());
+
+    Future<CheckIn> openWithArrivals(WidgetTester tester) async {
+      final service = _service(_MemoryStore());
+      final checkIn = (await tester.runAsync(service.checkIn))!;
+      final plan = GoalDraft(
+        kind: PhaseKind.cut,
+        startKg: checkIn.trendKg!,
+        targetKg: 80,
+        start: _today,
+        paceKg: 0.5,
+      ).toPlan();
+      final progress = GoalProgress(
+        start: GoalStart(
+          date: _today,
+          kg: checkIn.trendKg!,
+          targetKg: 80,
+          paceKgPerWeek: -0.5,
+        ),
+        nowKg: checkIn.trendKg!,
+        paceKgPerWeek: -0.5,
+        trend: [checkIn.trendKg!],
+        today: _today,
+      );
+      tester.view.physicalSize = const Size(1080, 4000);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: CheckInScreen(
+            service: service,
+            loadArrivals: () async => goalArrivals(progress, plan),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return checkIn;
+    }
+
+    testWidgets('moves the change and the arrival with it as it is typed', (
+      tester,
+    ) async {
+      final checkIn = await openWithArrivals(tester);
+      expect(find.text('By your plan'), findsOneWidget);
+      expect(find.text('At this target'), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('check-in-target')),
+        '2000',
+      );
+      await tester.pump();
+      // Today's goal 2988 less the 250 of activity a check-in leaves out.
+      expect(
+        find.text('\u2212988 kcal (activity no longer added)'),
+        findsOneWidget,
+      );
+      expect(find.text('By your plan'), findsNothing);
+      expect(find.text('At this target'), findsOneWidget);
+      final days = checkIn.daysToTargetAt(2000)!;
+      final weeks = (days / 7).round();
+      expect(find.textContaining('about $weeks weeks'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'That is the expenditure less '
+          '${checkIn.expenditureKcal.round() - 2000} kcal for ',
+        ),
+        findsOneWidget,
+      );
+
+      // Back to the proposal: the plan's rows again.
+      await tester.enterText(
+        find.byKey(const ValueKey('check-in-target')),
+        '${checkIn.proposedTargetKcal.round()}',
+      );
+      await tester.pump();
+      expect(find.text('By your plan'), findsOneWidget);
+    });
+
+    testWidgets('warns under the field of a target on the low side', (
+      tester,
+    ) async {
+      await _open(tester, _service(_MemoryStore()));
+      expect(find.text('This daily target is on the low side'), findsNothing);
+      await tester.enterText(
+        find.byKey(const ValueKey('check-in-target')),
+        '250',
+      );
+      await tester.pump();
+      expect(find.text('This daily target is on the low side'), findsOneWidget);
+      final field = tester.getBottomLeft(
+        find.byKey(const ValueKey('check-in-target')),
+      );
+      final warning = tester.getTopLeft(
+        find.text('This daily target is on the low side'),
+      );
+      expect(warning.dy, greaterThan(field.dy));
+      expect(
+        warning.dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const ValueKey('check-in-accept'))).dy,
+        ),
+      );
+    });
   });
 
   group("the plan's figure beside the target in use", () {

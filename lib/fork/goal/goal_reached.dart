@@ -14,6 +14,7 @@ import 'package:opennutritracker/fork/adaptive/adaptive_ui.dart'
     show refreshGoals;
 import 'package:opennutritracker/fork/goal/goal_actions.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
+import 'package:opennutritracker/fork/goal/goal_figure_grid.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart' show goalTitle;
 import 'package:opennutritracker/fork/goal/goal_planner.dart';
 import 'package:opennutritracker/fork/goal/goal_status.dart';
@@ -302,7 +303,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
             style: theme.textTheme.headlineSmall,
           ),
           Text(
-            '${format.format(plan.start)} – ${format.format(today)} · '
+            '${dateRangeText(format, plan.start, today)} · '
             '${goalLengthText(plan.start, today)}',
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium,
@@ -343,7 +344,7 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
                       ),
                     ),
                   const SizedBox(height: Dimens.spacing12),
-                  FigureGrid(
+                  GoalFigureGrid(
                     tiles: [
                       FigureTile(
                         label: 'Change',

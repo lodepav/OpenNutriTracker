@@ -946,6 +946,7 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
     // once the dialog has closed
     final forkMessenger = ScaffoldMessenger.maybeOf(context);
     String? forkVerdict;
+    HostedKeyVerdict? forkChecked;
     // [/fork]
     // Read before the first `await`, because the check below is started after
     // one and `context` may no longer be usable by then.
@@ -1094,14 +1095,24 @@ class _AiAssistDialogState extends State<AiAssistDialog> {
           _forkAnnounce(result.message!);
           return;
         }
+        forkChecked = result.verdict;
         forkVerdict = switch (result.verdict) {
           HostedKeyVerdict.checked => 'Key checked',
           HostedKeyVerdict.offline => 'Saved, not checked (offline)',
+          HostedKeyVerdict.failed => "Saved, couldn't check it",
           _ => 'Saved, not checked',
         };
       }
       // [/fork]
       await widget.storage.writeApiKey(typed, provider: provider);
+      // [fork] S441 key-not-checked: the Settings row says a saved key was
+      // not checked
+      if (forkChecked == HostedKeyVerdict.checked) {
+        hostedKeysNotChecked.remove(provider);
+      } else if (forkChecked != null) {
+        hostedKeysNotChecked.add(provider);
+      }
+      // [/fork]
       changed = true;
     }
 

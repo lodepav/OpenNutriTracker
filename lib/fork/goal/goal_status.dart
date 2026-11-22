@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart' show GoalBand;
@@ -64,6 +65,14 @@ String signedWeightText(double kg, BodyWeightUnit unit) =>
 String signedPaceText(double kgPerWeek, BodyWeightUnit unit) =>
     '${signedRate(unit == BodyWeightUnit.kg ? kgPerWeek : kgPerWeek * 2.20462)} '
     '${unit == BodyWeightUnit.kg ? 'kg' : 'lb'} a week';
+
+/// [start] – [end] in [format]; one date when both fall on the same day.
+String dateRangeText(intl.DateFormat format, DateTime start, DateTime end) {
+  final from = format.format(start);
+  return CalendarDayCalc.daysBetween(start, end) == 0
+      ? from
+      : '$from – ${format.format(end)}';
+}
 
 /// A goal's length from [start] to [end]: in days under a week, at least
 /// one, else in weeks as [goalWeeks] counts them.

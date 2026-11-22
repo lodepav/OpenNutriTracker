@@ -6,6 +6,7 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/goal/goal_chart.dart';
+import 'package:opennutritracker/fork/goal/goal_figure_grid.dart';
 import 'package:opennutritracker/fork/goal/goal_status.dart';
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
@@ -112,6 +113,9 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
     final history = data.history;
     final running = data.running;
     final today = data.today;
+    final dayOne =
+        running != null &&
+        CalendarDayCalc.daysBetween(running.start, today) < 1;
     final first = DateTime(
       today.year,
       today.month,
@@ -166,7 +170,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
           'Goals you complete show here, with how long each took.',
         )
       else
-        FigureGrid(
+        GoalFigureGrid(
           tiles: [
             FigureTile(label: 'Goals completed', value: '${history.length}'),
             FigureTile(
@@ -205,9 +209,12 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
             context,
             kind: running.kind,
             length: goalLengthText(running.start, today),
-            dates: '${format.format(running.start)} – now',
+            // On its first day there is no change yet to show.
+            dates: dayOne
+                ? 'Started today'
+                : '${format.format(running.start)} – now',
             startKg: running.startKg,
-            endKg: data.trend.isEmpty ? null : data.trend.last,
+            endKg: data.trend.isEmpty || dayOne ? null : data.trend.last,
             targetKg: running.targetKg,
             now: true,
           ),
@@ -224,7 +231,7 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                   context,
                   kind: r.kind,
                   length: goalLengthText(r.start, r.end),
-                  dates: '${format.format(r.start)} – ${format.format(r.end)}',
+                  dates: dateRangeText(format, r.start, r.end),
                   startKg: r.startKg,
                   endKg: r.endKg,
                   targetKg: r.targetKg,
@@ -286,6 +293,11 @@ class _CompletedGoalsPageState extends State<CompletedGoalsPage> {
                     Text(
                       '$weights'
                       '${targetKg == null ? '' : ' · target ${weightText(targetKg, unit)}'}',
+                      style: theme.textTheme.bodySmall,
+                    )
+                  else if (targetKg != null)
+                    Text(
+                      'Target ${weightText(targetKg, unit)}',
                       style: theme.textTheme.bodySmall,
                     ),
                 ],

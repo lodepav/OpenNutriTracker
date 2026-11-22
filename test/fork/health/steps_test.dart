@@ -303,6 +303,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Enter 1,000 to 100,000 steps'), findsOneWidget);
       }
+      // At large text the range wraps rather than losing its upper bound.
+      expect(tester.widget<TextField>(field).decoration!.errorMaxLines, 3);
       expect(await steps.goal(), StepCounts.defaultGoal);
 
       // The error goes as the text changes.

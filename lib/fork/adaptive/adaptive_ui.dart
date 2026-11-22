@@ -131,6 +131,10 @@ String todayGoalText(
   );
 }
 
+/// Why today's goal moves when a check-in's target leaves out the logged
+/// activity Home added to it; said on the check-in and in its bar.
+const activityDroppedText = '(activity no longer added)';
+
 /// The bar after a check-in is done: today's goal, shown [before] and
 /// [after], in [unit], and why when [activityDropped].
 String checkInDoneText({
@@ -141,7 +145,7 @@ String checkInDoneText({
 }) =>
     "Today's goal ${after == before ? 'stays' : 'is now'} $after $unit"
     '${after == before ? '' : ', from $before'}'
-    '${activityDropped ? ' (activity is now part of the target)' : ''}';
+    '${activityDropped ? ' $activityDroppedText' : ''}';
 
 /// The settings that differ between two [AdaptiveSettings.targetBasis]
 /// strings, named as Expenditure settings names them.
@@ -919,196 +923,262 @@ class _CheckInScreenState extends State<CheckInScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            _card(context, Icons.flag_outlined, theme.colorScheme.primary, 'Target', [
-              FutureBuilder<_TodayGoal?>(
-                future: _today,
-                builder: (context, today) => switch (today.data) {
-                  final today? => _row(
-                    "Today's goal",
-                    todayGoalText(context, today.total, today.activity),
+            // The rows under the field follow what is typed in it.
+            ListenableBuilder(
+              listenable: _target,
+              builder: (context, _) {
+                final target = _typedTarget(checkIn, proposed);
+                final edited =
+                    target != null && target != checkIn.proposedTargetKcal;
+                final pace = edited
+                    ? checkIn.paceAt(target)
+                    : checkIn.goalRateKgPerWeek;
+                return _card(context, Icons.flag_outlined, theme.colorScheme.primary, 'Target', [
+                  FutureBuilder<_TodayGoal?>(
+                    future: _today,
+                    builder: (context, today) => switch (today.data) {
+                      final today? => _row(
+                        "Today's goal",
+                        todayGoalText(context, today.total, today.activity),
+                      ),
+                      null => const SizedBox.shrink(),
+                    },
                   ),
-                  null => const SizedBox.shrink(),
-                },
-              ),
-              if (current != null)
-                _row(switch ((daily, last == null)) {
-                  // Before the first check-in it is the formula's, which
-                  // Home adds the day's activity to.
-                  (true, true) => 'Formula target before activity',
-                  (false, true) => 'Formula target without activity',
-                  (true, false) => 'Current target before activity',
-                  (false, false) => 'Current target',
-                }, _kcal(current)),
-              // Not filled in when it is nothing or less, so said apart.
-              if (proposed <= 0)
-                _row(
-                  daily ? 'Proposed target before activity' : 'Proposed target',
-                  _kcal(checkIn.proposedTargetKcal),
-                  color: textAccent(context),
-                  large: true,
-                ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: TextField(
-                  key: const ValueKey('check-in-target'),
-                  controller: _target,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: daily
-                        ? 'Daily target before activity'
-                        : 'Daily target',
-                    suffixText: energyUnit(context),
+                  if (current != null)
+                    _row(switch ((daily, last == null)) {
+                      // Before the first check-in it is the formula's, which
+                      // Home adds the day's activity to.
+                      (true, true) => 'Formula target before activity',
+                      (false, true) => 'Formula target without activity',
+                      (true, false) => 'Current target before activity',
+                      (false, false) => 'Current target',
+                    }, _kcal(current)),
+                  // Not filled in when it is nothing or less, so said apart.
+                  if (proposed <= 0)
+                    _row(
+                      daily
+                          ? 'Proposed target before activity'
+                          : 'Proposed target',
+                      _kcal(checkIn.proposedTargetKcal),
+                      color: textAccent(context),
+                      large: true,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: TextField(
+                      key: const ValueKey('check-in-target'),
+                      controller: _target,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: daily
+                            ? 'Daily target before activity'
+                            : 'Daily target',
+                        suffixText: energyUnit(context),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              FutureBuilder<_TodayGoal?>(
-                future: _today,
-                builder: (context, today) {
-                  if (today.connectionState != ConnectionState.done) {
-                    return const SizedBox.shrink();
-                  }
-                  final now = today.data;
-                  // Accepting moves Home's goal only on an Adaptive target.
-                  if (now == null ||
-                      !settings.adaptiveTarget ||
-                      settings.fixedTarget) {
-                    // The change to the target in use.
-                    return current == null
-                        ? const SizedBox.shrink()
-                        : _row(
-                            'Change',
-                            _shownDiff(
-                              checkIn.proposedTargetKcal,
-                              current,
-                              signed: true,
+                  // Home's low-target card, said before Accept; a proposal
+                  // under it is said above.
+                  if (target != null &&
+                      checkIn.belowFloor(target) &&
+                      (edited || !checkIn.belowRecommendedFloor))
+                    Semantics(
+                      key: const ValueKey('check-in-low-target'),
+                      container: true,
+                      liveRegion: true,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'This daily target is on the low side',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: theme.colorScheme.error,
+                              ),
                             ),
-                          );
-                  }
-                  final change = todayGoalChange(
-                    todayKcal: now.total,
-                    todayActivityKcal: now.activity,
-                    proposedKcal: checkIn.proposedTargetKcal,
-                    weekdayOffsetKcal: now.offset,
-                    dailyActivityKcal: now.daily,
-                    shown: (kcal) => energyValue(context, kcal),
-                  );
-                  return _row(
-                    "Change from today's goal",
-                    '${signedText(change.change.toDouble())} '
-                        '${energyUnit(context)}'
-                        '${change.activityDropped ? ' (activity no longer added)' : ''}',
-                  );
-                },
-              ),
-              if (checkIn.activityUnreadable)
-                Text(
-                  key: const ValueKey('check-in-activity-unreadable'),
-                  "Your activity couldn't be read this time, so this leaves "
-                  'it out'
-                  '${settings.autoAcceptCheckIn ? " and wasn't set on its own" : ''}. '
-                  'Check the Health Connect permission, or keep your target '
-                  'for now.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              if (checkIn.belowRecommendedFloor)
-                Text(
-                  key: const ValueKey('check-in-below-floor'),
-                  'This is under the '
-                  '${_kcal(checkIn.recommendedFloorKcal!)} a day advised as '
-                  'a minimum'
-                  '${settings.autoAcceptCheckIn ? ", so it wasn't set on its own" : ''}. '
-                  'Check your pace, or type the target you want below.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              if (last == null &&
-                  !daily &&
-                  !capped &&
-                  !checkIn.fromProfile &&
-                  checkIn.goalRateKgPerWeek != 0)
-                Text(
-                  'That is the expenditure '
-                  '${checkIn.goalRateKgPerWeek < 0 ? 'less' : 'plus'} '
-                  '${_shownDiff(checkIn.expenditureKcal, checkIn.proposedTargetKcal)} '
-                  'for ${signedPaceText(checkIn.goalRateKgPerWeek, weightUnit)}'
-                  '${_perKg(checkIn, settings, weightUnit)}.',
-                  style: theme.textTheme.bodySmall,
-                ),
-              if (daily)
-                Text(
-                  "Each day's counted activity is added to it, at most "
-                  '${_kcal(maxDailyActivityKcal)}.',
-                  style: theme.textTheme.bodySmall,
-                ),
-              if (checkIn.activityChangeKcal case final change?
-                  when change.abs() >= 1 && !checkIn.activityUnreadable)
-                Text(
-                  "The past week's activity moves the target "
-                  '${energyText(context, change, signed: true)} from the last '
-                  "check-in's; the check-in limit doesn't hold it back.",
-                  style: theme.textTheme.bodySmall,
-                ),
-              if (capped && cap != null)
-                Text(
-                  'A check-in moves the expenditure under the target at most '
-                  '${_kcal(cap)}; the full change would put the target at '
-                  '${_kcal(checkIn.uncappedTargetKcal)}.',
-                  style: theme.textTheme.bodySmall,
-                )
-              else if (cap != null && checkIn.movedWithinCap)
-                Text(
-                  'The expenditure moved less than the check-in limit of '
-                  '${_kcal(cap)}, so none of the change is held back.',
-                  style: theme.textTheme.bodySmall,
-                )
-              else if (last != null &&
-                  !checkIn.fromProfile &&
-                  checkIn.capCalibrating)
-                Text(
-                  'The check-in limit does not apply yet, while the '
-                  'expenditure is still calibrating.',
-                  style: theme.textTheme.bodySmall,
-                ),
-              // The dates Goal progress gives, from the same goal and plan.
-              FutureBuilder<GoalArrivals?>(
-                future: _arrivals,
-                builder: (context, arrivals) {
-                  final a = arrivals.data;
-                  if (a == null) return const SizedBox.shrink();
-                  final locale = Localizations.localeOf(
-                    context,
-                  ).toLanguageTag();
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (a.byPlan case final day?)
-                        _row(
-                          a.planEnds
-                              ? 'By your plan'
-                              : 'From today at your plan’s pace',
-                          _eta(day, locale),
+                            Text(
+                              "Most adults shouldn't eat fewer than "
+                              '${_kcal(checkIn.recommendedFloorKcal!)} a day for '
+                              'any length of time without medical guidance.',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
                         ),
-                      if ((a.recent, a.atRecent) case (
-                        final recent?,
-                        final day?,
-                      ))
-                        _row(
-                          'At your last ${recent.days} days’ pace',
-                          _eta(day, locale),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ]),
+                      ),
+                    ),
+                  FutureBuilder<_TodayGoal?>(
+                    future: _today,
+                    builder: (context, today) {
+                      if (today.connectionState != ConnectionState.done) {
+                        return const SizedBox.shrink();
+                      }
+                      final now = today.data;
+                      if (target == null) return const SizedBox.shrink();
+                      // Accepting moves Home's goal only on an Adaptive target.
+                      if (now == null ||
+                          !settings.adaptiveTarget ||
+                          settings.fixedTarget) {
+                        // The change to the target in use.
+                        return current == null
+                            ? const SizedBox.shrink()
+                            : _row(
+                                'Change',
+                                _shownDiff(target, current, signed: true),
+                              );
+                      }
+                      final change = todayGoalChange(
+                        todayKcal: now.total,
+                        todayActivityKcal: now.activity,
+                        proposedKcal: target,
+                        weekdayOffsetKcal: now.offset,
+                        dailyActivityKcal: now.daily,
+                        shown: (kcal) => energyValue(context, kcal),
+                      );
+                      return _row(
+                        "Change from today's goal",
+                        '${signedText(change.change.toDouble())} '
+                            '${energyUnit(context)}'
+                            '${change.activityDropped ? ' $activityDroppedText' : ''}',
+                      );
+                    },
+                  ),
+                  if (checkIn.activityUnreadable)
+                    Text(
+                      key: const ValueKey('check-in-activity-unreadable'),
+                      "Your activity couldn't be read this time, so this leaves "
+                      'it out'
+                      '${settings.autoAcceptCheckIn ? " and wasn't set on its own" : ''}. '
+                      'Check the Health Connect permission, or keep your target '
+                      'for now.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  if (checkIn.belowRecommendedFloor)
+                    Text(
+                      key: const ValueKey('check-in-below-floor'),
+                      'This is under the '
+                      '${_kcal(checkIn.recommendedFloorKcal!)} a day advised as '
+                      'a minimum'
+                      '${settings.autoAcceptCheckIn ? ", so it wasn't set on its own" : ''}. '
+                      'Check your pace, or type the target you want below.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  if (last == null &&
+                      !daily &&
+                      !capped &&
+                      !checkIn.fromProfile &&
+                      target != null &&
+                      pace != null &&
+                      pace != 0)
+                    Text(
+                      'That is the expenditure '
+                      '${(edited ? target < checkIn.expenditureKcal : pace < 0) ? 'less' : 'plus'} '
+                      '${_shownDiff(checkIn.expenditureKcal, target)} '
+                      'for ${signedPaceText(pace, weightUnit)}'
+                      '${_perKg(checkIn, settings, weightUnit)}.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  if (daily)
+                    Text(
+                      "Each day's counted activity is added to it, at most "
+                      '${_kcal(maxDailyActivityKcal)}.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  if (checkIn.activityChangeKcal case final change?
+                      when change.abs() >= 1 && !checkIn.activityUnreadable)
+                    Text(
+                      "The past week's activity moves the target "
+                      '${energyText(context, change, signed: true)} from the last '
+                      "check-in's; the check-in limit doesn't hold it back.",
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  if (capped && cap != null)
+                    Text(
+                      'A check-in moves the expenditure under the target at most '
+                      '${_kcal(cap)}; the full change would put the target at '
+                      '${_kcal(checkIn.uncappedTargetKcal)}.',
+                      style: theme.textTheme.bodySmall,
+                    )
+                  else if (cap != null && checkIn.movedWithinCap)
+                    Text(
+                      'The expenditure moved less than the check-in limit of '
+                      '${_kcal(cap)}, so none of the change is held back.',
+                      style: theme.textTheme.bodySmall,
+                    )
+                  else if (last != null &&
+                      !checkIn.fromProfile &&
+                      checkIn.capCalibrating)
+                    Text(
+                      'The check-in limit does not apply yet, while the '
+                      'expenditure is still calibrating.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  // The dates Goal progress gives, from the same goal and plan.
+                  FutureBuilder<GoalArrivals?>(
+                    future: _arrivals,
+                    builder: (context, arrivals) {
+                      final a = arrivals.data;
+                      if (a == null) return const SizedBox.shrink();
+                      final locale = Localizations.localeOf(
+                        context,
+                      ).toLanguageTag();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Another target than the plan's has its own date.
+                          if (edited)
+                            _row('At this target', switch (checkIn
+                                .daysToTargetAt(target)) {
+                              final days? => _eta(
+                                DateUtils.addDaysToDate(
+                                  DateUtils.dateOnly(DateTime.now()),
+                                  days,
+                                ),
+                                locale,
+                              ),
+                              null => 'Not at this pace',
+                            })
+                          else if (a.byPlan case final day?)
+                            _row(
+                              a.planEnds
+                                  ? 'By your plan'
+                                  : 'From today at your plan’s pace',
+                              _eta(day, locale),
+                            ),
+                          if ((a.recent, a.atRecent) case (
+                            final recent?,
+                            final day?,
+                          ))
+                            _row(
+                              'At your last ${recent.days} days’ pace',
+                              _eta(day, locale),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ]);
+              },
+            ),
           ],
         );
       },
     ),
   );
+
+  /// The target in the field, in kcal: the proposal while it shows that;
+  /// null while it holds none.
+  double? _typedTarget(CheckIn checkIn, int proposed) {
+    final typed = double.tryParse(_target.text.trim());
+    if (typed == null || !typed.isFinite || typed <= 0) return null;
+    return typed == proposed
+        ? checkIn.proposedTargetKcal
+        : kcalFromInput(context, typed);
+  }
 
   /// Accept, and Keep below it while there is a target in use; above the
   /// keyboard while the target field has it. Off unless [enabled].
@@ -1180,7 +1250,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   child: Text('Keep $keepText'),
                 ),
               ),
-            // "Keep" reads as no change, so a move of today's goal is said.
+            // "Keep" reads as no change, so a move of today's goal is said,
+            // as Keep's, not Accept's.
             if (current != null)
               FutureBuilder<_TodayGoal?>(
                 future: _today,
@@ -1195,7 +1266,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       key: const ValueKey('check-in-keep-moves'),
-                      "Today's goal: ${move.before} → ${move.after} $unit",
+                      "Keep: today's goal ${move.before} → ${move.after} $unit",
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),

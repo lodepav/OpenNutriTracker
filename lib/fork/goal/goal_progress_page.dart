@@ -13,6 +13,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/goal_saving.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/goal/goal_figure_grid.dart';
 import 'package:opennutritracker/fork/goal/goal_plan_view.dart';
 import 'package:opennutritracker/fork/goal/goal_progress.dart';
 import 'package:opennutritracker/fork/goal/goal_status.dart';
@@ -338,7 +339,7 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         ),
       ],
       const SizedBox(height: Dimens.spacing12),
-      FigureGrid(
+      GoalFigureGrid(
         tiles: [
           // No figure on the first day: no tile.
           if (p.daysIn > 0)

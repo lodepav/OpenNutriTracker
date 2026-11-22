@@ -115,6 +115,12 @@ class CalendarGoals {
     );
   }
 
+  /// The kinds the calendar colours its days in, for its legend.
+  Set<PhaseKind> get kinds => {
+    for (final p in [?plan, ...upcoming]) ...p.phases.map((ph) => ph.kind),
+    for (final r in history) r.kind,
+  };
+
   /// The stretches of one kind, each phase of a plan and each completed
   /// goal, first to last.
   List<CalendarBand> bands(BodyWeightUnit unit) {
@@ -286,50 +292,74 @@ class _GoalCalendarPageState extends State<GoalCalendarPage> {
           ? const Center(child: CircularProgressIndicator())
           : span == null
           ? const Center(child: Text('No goals yet.'))
-          : SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                // the gutter every other page has
-                Dimens.spacing16,
-                0,
-                Dimens.spacing16,
-                Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(4, 0, 4, 8),
-                    child: _Legend(),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Above the months, which open scrolled to today's.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing16 + 4,
+                    0,
+                    Dimens.spacing16 + 4,
+                    8,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                    child: Text(
-                      'From your first goal to the last one planned. Tap a '
-                      'day to edit or remove its goal.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                  child: _Legend(
+                    kinds: goals.kinds,
+                    upNext: goals.upcoming.isNotEmpty,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Dimens.spacing16 + 4,
+                    0,
+                    Dimens.spacing16 + 4,
+                    12,
+                  ),
+                  child: Text(
+                    'From your first goal to the last one planned. Tap a '
+                    'day to edit or remove its goal.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                      // the gutter every other page has
+                      Dimens.spacing16,
+                      0,
+                      Dimens.spacing16,
+                      Dimens.spacing32 + MediaQuery.paddingOf(context).bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (
+                          var m = DateTime(span.first.year, span.first.month);
+                          !m.isAfter(span.last);
+                          m = DateTime(m.year, m.month + 1)
+                        )
+                          Padding(
+                            key:
+                                m.year == _today.year && m.month == _today.month
+                                ? _todayKey
+                                : null,
+                            padding: const EdgeInsets.only(
+                              bottom: Dimens.spacing12,
+                            ),
+                            child: _Month(
+                              month: m,
+                              goals: goals,
+                              bands: goals.bands(widget.unit),
+                              today: _today,
+                              locale: locale,
+                              onDay: (day) => _openDay(context, goals, day),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  for (
-                    var m = DateTime(span.first.year, span.first.month);
-                    !m.isAfter(span.last);
-                    m = DateTime(m.year, m.month + 1)
-                  )
-                    Padding(
-                      key: m.year == _today.year && m.month == _today.month
-                          ? _todayKey
-                          : null,
-                      padding: const EdgeInsets.only(bottom: Dimens.spacing12),
-                      child: _Month(
-                        month: m,
-                        goals: goals,
-                        bands: goals.bands(widget.unit),
-                        today: _today,
-                        locale: locale,
-                        onDay: (day) => _openDay(context, goals, day),
-                      ),
-                    ),
-                ],
-              ),
+                ),
+              ],
             ),
     );
   }
@@ -563,7 +593,10 @@ void showGoalUndo(
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend();
+  final Set<PhaseKind> kinds;
+  final bool upNext;
+
+  const _Legend({required this.kinds, required this.upNext});
 
   @override
   Widget build(BuildContext context) => ExcludeSemantics(
@@ -572,12 +605,14 @@ class _Legend extends StatelessWidget {
       runSpacing: 4,
       children: [
         for (final kind in PhaseKind.values)
-          _Key(color: phaseColor(context, kind), label: kind.label),
-        _Key(
-          color: phaseColor(context, PhaseKind.bulk),
-          label: 'Up next',
-          striped: true,
-        ),
+          if (kinds.contains(kind))
+            _Key(color: phaseColor(context, kind), label: kind.label),
+        if (upNext)
+          _Key(
+            color: phaseColor(context, PhaseKind.bulk),
+            label: 'Up next',
+            striped: true,
+          ),
       ],
     ),
   );

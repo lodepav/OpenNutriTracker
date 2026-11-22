@@ -109,7 +109,8 @@ void main() {
     );
     expect(s(true, 5.76, 5.75), GoalStanding.over);
     expect(s(true, 5.75, 5.75), GoalStanding.under);
-    expect(s(true, 99, null), GoalStanding.under);
+    // No limit to be within: grey, not green.
+    expect(s(true, 99, null), GoalStanding.toReach);
     expect(s(false, 90, 30), GoalStanding.reached);
     expect(s(false, 30, 30), GoalStanding.reached);
     expect(s(false, 29.9, 30), GoalStanding.toReach);
@@ -125,7 +126,7 @@ void main() {
     const p = AppPalette.light;
     expect(goalStandingColor(GoalStanding.reached, p, scheme), p.accent);
     expect(goalStandingColor(GoalStanding.toReach, p, scheme), p.textMuted);
-    expect(goalStandingColor(GoalStanding.under, p, scheme), p.textMuted);
+    expect(goalStandingColor(GoalStanding.under, p, scheme), p.accent);
     expect(goalStandingColor(GoalStanding.over, p, scheme), scheme.error);
 
     expect(goalStandingWord(GoalStanding.reached, isLimit: false), 'reached');
@@ -139,7 +140,8 @@ void main() {
       'on target',
     );
     expect(goalStandingWord(GoalStanding.toReach, isLimit: false), isNull);
-    expect(goalStandingWord(GoalStanding.under, isLimit: true), isNull);
+    expect(goalStandingWord(GoalStanding.under, isLimit: true), 'within limit');
+    expect(goalStandingKey, isNot(contains('under a limit')));
   });
 
   test('the range line names its dates, its days and the days logged', () {
@@ -202,7 +204,10 @@ void main() {
     expect(asked.last, (DateTime(2026, 10, 19), DateTime(2026, 10, 25)));
     // A mean over the two days with food: 30 g, 1500 mg of sodium.
     expect(label(tester, 'Fibre'), 'Fibre, 30 of 30 g, reached');
-    expect(label(tester, 'Salt'), 'Salt (from sodium), 3.8 of 5.8 g');
+    expect(
+      label(tester, 'Salt'),
+      'Salt (from sodium), 3.8 of 5.8 g, within limit',
+    );
     // Under the ten bars, past the first screen in the test font.
     await tester.scrollUntilVisible(
       find.textContaining('days with food logged'),
@@ -280,7 +285,8 @@ void main() {
     // Fibre at 20 of 30 g is not reached: grey, not green.
     expect(bar('Fibre'), AppPalette.light.textMuted);
     expect(bar('Salt'), Theme.of(context).colorScheme.error);
-    expect(bar('Sugars'), AppPalette.light.textMuted);
+    // Under its limit: green, as a goal met is.
+    expect(bar('Sugars'), AppPalette.light.accent);
     expect(find.textContaining('· reached'), findsNothing);
 
     await tester.tap(find.bySemanticsIdentifier('nutrient-goals-week'));

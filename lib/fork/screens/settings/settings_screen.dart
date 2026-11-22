@@ -13,6 +13,7 @@ export 'package:opennutritracker/features/settings/settings_screen.dart'
     show SettingsScreenArguments;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
+import 'package:opennutritracker/fork/ai/hosted_key_check.dart';
 import 'package:opennutritracker/fork/bulk/photo_disclosure.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show DateFormat;

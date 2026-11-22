@@ -122,7 +122,7 @@ void main() {
       );
     });
 
-    test('no answer is offline, any other answer unchecked', () async {
+    test('a network failure is offline, any other answer unchecked', () async {
       final offline = await checkHostedKey(
         MockClient((_) async => throw const SocketException('no route')),
         AiProvider.openrouter,
@@ -130,13 +130,20 @@ void main() {
       );
       expect(offline.verdict, HostedKeyVerdict.offline);
 
+      // A timeout or a TLS failure can happen online: not called offline.
       final slow = await checkHostedKey(
         MockClient((_) => Completer<http.Response>().future),
         AiProvider.openrouter,
         'k',
         timeout: const Duration(milliseconds: 10),
       );
-      expect(slow.verdict, HostedKeyVerdict.offline);
+      expect(slow.verdict, HostedKeyVerdict.failed);
+      final tls = await checkHostedKey(
+        MockClient((_) async => throw const HandshakeException('bad cert')),
+        AiProvider.openai,
+        'k',
+      );
+      expect(tls.verdict, HostedKeyVerdict.failed);
 
       for (final code in [403, 429, 500]) {
         final result = await checkHostedKey(
@@ -149,12 +156,40 @@ void main() {
     });
   });
 
+  test('the AI row says while it is on that its key was not checked', () {
+    hostedKeysNotChecked
+      ..clear()
+      ..add(AiProvider.openai);
+    addTearDown(hostedKeysNotChecked.clear);
+    expect(
+      withKeyCheckNote('On — OpenAI', on: true, provider: AiProvider.openai),
+      'On — OpenAI, key not checked',
+    );
+    expect(
+      withKeyCheckNote('Paused', on: false, provider: AiProvider.openai),
+      'Paused',
+    );
+    expect(
+      withKeyCheckNote(
+        'On — Anthropic',
+        on: true,
+        provider: AiProvider.anthropic,
+      ),
+      'On — Anthropic',
+    );
+    expect(
+      withKeyCheckNote(null, on: true, provider: AiProvider.openai),
+      isNull,
+    );
+  });
+
   group('the dialog', () {
     late AiCredentialStorage storage;
     late List<http.Request> asked;
     late Future<http.Response> Function(http.Request) answer;
 
     setUp(() {
+      hostedKeysNotChecked.clear();
       storage = AiCredentialStorage(_MemoryStorage());
       asked = [];
       answer = (_) async => http.Response('{}', 200);
@@ -282,10 +317,13 @@ void main() {
       tester,
     ) async {
       await storage.setTermsAccepted(true);
+      hostedKeysNotChecked.add(AiProvider.openrouter);
       await typeOpenRouterKey(tester, 'sk-or-good');
 
       expect(find.byType(AiAssistDialog), findsNothing);
       expect(find.text('Key checked'), findsOneWidget);
+      // A key that passes takes an earlier one's mark off.
+      expect(hostedKeysNotChecked, isEmpty);
       expect(
         await storage.readApiKey(provider: AiProvider.openrouter),
         'sk-or-good',
@@ -302,10 +340,27 @@ void main() {
 
       expect(find.byType(AiAssistDialog), findsNothing);
       expect(find.text('Saved, not checked (offline)'), findsOneWidget);
+      expect(hostedKeysNotChecked, {AiProvider.openrouter});
       expect(
         await storage.readApiKey(provider: AiProvider.openrouter),
         'sk-or-good',
       );
+    });
+
+    testWidgets('a check that fails online says so and marks the key', (
+      tester,
+    ) async {
+      await storage.setTermsAccepted(true);
+      answer = (_) async => throw const HandshakeException('bad cert');
+      await typeOpenRouterKey(tester, 'sk-or-good');
+
+      expect(find.byType(AiAssistDialog), findsNothing);
+      expect(find.text("Saved, couldn't check it"), findsOneWidget);
+      expect(
+        await storage.readApiKey(provider: AiProvider.openrouter),
+        'sk-or-good',
+      );
+      expect(hostedKeysNotChecked, {AiProvider.openrouter});
     });
 
     testWidgets('Remove can be undone, and a paused AI stays paused', (

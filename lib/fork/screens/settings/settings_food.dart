@@ -90,11 +90,15 @@ extension _FoodSettings on _SettingsScreenState {
   /// The switch itself lives in [aiAssistSubtitle], shared with onboarding's
   /// Other options page since #728 — one exhaustive site rather than two that
   /// can disagree about who is being sent to.
-  String? _aiAssistSubtitle(BuildContext context) => aiAssistSubtitle(
-    S.of(context),
-    configured: _aiConfigured,
-    endpoint: _aiEndpoint,
-    enabled: _aiEnabled,
+  String? _aiAssistSubtitle(BuildContext context) => withKeyCheckNote(
+    aiAssistSubtitle(
+      S.of(context),
+      configured: _aiConfigured,
+      endpoint: _aiEndpoint,
+      enabled: _aiEnabled,
+      provider: _aiProvider,
+    ),
+    on: _aiConfigured == true && _aiEnabled,
     provider: _aiProvider,
   );
 

@@ -1,6 +1,7 @@
-// Reset profile data says first that the shared AI key goes too, on the row
-// and in the dialog, and calls logged foods by that name (the round-2 G6
-// critique).
+// Reset profile data names the shared AI key, on the row and in the dialog,
+// and calls logged foods by that name (the round-2 G6 critique); the dialog
+// leads with what is deleted and offers an export first, and the Nutrients
+// row names the daily panel as its page does (round 4).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -17,7 +18,10 @@ import 'package:opennutritracker/features/diary/presentation/bloc/calendar_day_b
 import 'package:opennutritracker/features/diary/presentation/bloc/diary_bloc.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/bloc/profile_bloc.dart';
+import 'package:opennutritracker/features/settings/presentation/bloc/export_import_bloc.dart';
 import 'package:opennutritracker/features/settings/presentation/bloc/settings_bloc.dart';
+import 'package:opennutritracker/features/settings/presentation/widgets/export_import_dialog.dart';
+import 'package:opennutritracker/fork/ai/hosted_key_check.dart';
 import 'package:opennutritracker/fork/screens/settings/settings_screen.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
@@ -50,6 +54,19 @@ class _FakeSettingsBloc extends Fake implements SettingsBloc {
   @override
   Future<void> setShowMealMacros(bool showMealMacros) =>
       (mealMacrosSaved = Completer<void>()).future;
+}
+
+/// What the Export / import dialog reads; nothing here exports.
+class _IdleExportImportBloc extends Fake implements ExportImportBloc {
+  @override
+  ExportImportState get state => ExportImportInitial();
+
+  @override
+  Stream<ExportImportState> get stream =>
+      const Stream<ExportImportState>.empty();
+
+  @override
+  Future<void> close() async {}
 }
 
 /// The screen resolves these in `initState` and only calls them from
@@ -179,35 +196,77 @@ void main() {
     );
   });
 
-  testWidgets('the dialog says first that the shared AI key goes', (
-    tester,
-  ) async {
+  testWidgets('the dialog leads with what goes, ends with no undo, and '
+      'offers an export first', (tester) async {
+    locator.registerSingleton<ExportImportBloc>(_IdleExportImportBloc());
     await tester.binding.setSurfaceSize(const Size(400, 3000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(section: SettingsSection.data));
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.settingsDeleteAllDataLabel));
     await tester.pumpAndSettle();
-    final body = tester
-        .widget<Text>(
+    final lines = tester
+        .widgetList<Text>(
           find.descendant(
             of: find.byType(AlertDialog),
-            matching: find.textContaining('every profile'),
+            matching: find.byType(Text),
           ),
         )
-        .data!;
-    expect(
-      body,
-      startsWith(
-        'This also removes the AI provider key and server address, which '
-        'every profile on this device shares.',
-      ),
-    );
-    expect(body, contains('logged foods'));
-    expect(body, isNot(contains(' meals, activities')));
-    // Cancel leaves everything as it was.
+        .map((t) => t.data)
+        .whereType<String>()
+        .toList();
+    final deletes = lines.indexWhere((l) => l.startsWith('Deletes '));
+    expect(deletes, isNonNegative, reason: '$lines');
+    expect(lines[deletes], contains('logged foods'));
+    expect(lines[deletes], contains('every profile shares'));
+    expect(lines[deletes], isNot(contains(' meals, activities')));
+    expect(lines[deletes + 1], startsWith('Other profiles'));
+    expect(lines[deletes + 2], 'This cannot be undone.');
+
+    // Export first closes this dialog and opens Export / import.
+    await tester.tap(find.text('Export first'));
+    await tester.pumpAndSettle();
+    expect(find.text('Export first'), findsNothing);
+    expect(find.byType(ExportImportDialog), findsOneWidget);
+  });
+
+  testWidgets('Cancel leaves everything as it was', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.data));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.settingsDeleteAllDataLabel));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(l10nEn.dialogCancelLabel));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('the AI row says a saved key was not checked', (tester) async {
+    final credentials = locator<AiCredentialStorage>();
+    await credentials.setTermsAccepted(true);
+    await credentials.setActiveProvider(AiProvider.openai);
+    await credentials.writeApiKey('sk-test', provider: AiProvider.openai);
+    await credentials.setEnabled(true);
+    hostedKeysNotChecked.add(AiProvider.openai);
+    addTearDown(hostedKeysNotChecked.clear);
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.food));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('OpenAI, key not checked'), findsOneWidget);
+  });
+
+  testWidgets('the Nutrients row calls the panel by its page\'s name', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.appearance));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Pick which nutrients appear on the daily panel'),
+      findsOneWidget,
+    );
   });
 }

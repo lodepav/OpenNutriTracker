@@ -22,6 +22,10 @@ import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/add/logged_bar.dart';
 // [/fork]
+// [fork] S436 recipe-detail-delete-undo
+import 'package:opennutritracker/features/recipes/presentation/bloc/recipes_bloc.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 class RecipeDetailArguments {
@@ -52,6 +56,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   // The meal Log goes to: the + sheet's, else the time of day's (U7).
   late IntakeTypeEntity _meal;
   // [/fork]
+  RecipeEntity? _deleting; // [fork] S436 recipe-detail-delete-undo
 
   @override
   void initState() {
@@ -79,6 +84,17 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
       bloc: _bloc,
       listener: (context, state) {
         if (state is RecipeDetailDeleted || state is RecipeDetailMissing) {
+          // [fork] S436 recipe-detail-delete-undo: the bar outlives this page
+          final deleted = _deleting;
+          if (state is RecipeDetailDeleted && deleted != null) {
+            showRecipesDeleted(
+              ScaffoldMessenger.of(context),
+              [deleted],
+              onRestored: () =>
+                  locator<RecipesBloc>().add(const LoadRecipesEvent()),
+            );
+          }
+          // [/fork]
           Navigator.of(context).pop();
         }
       },
@@ -283,23 +299,30 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(S.of(context).recipeDeleteConfirmTitle),
-        content: Text(S.of(context).recipeDeleteConfirmContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(S.of(context).dialogCancelLabel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(S.of(context).dialogDeleteLabel),
-          ),
-        ],
-      ),
-    );
+    // [fork] S436 recipe-detail-delete-undo: the list's confirm, by name
+    // and in red, and its Undo bar after (H3, H4)
+    // final confirmed = await showDialog<bool>(
+    //   context: context,
+    //   builder: (ctx) => AlertDialog(
+    //     title: Text(S.of(context).recipeDeleteConfirmTitle),
+    //     content: Text(S.of(context).recipeDeleteConfirmContent),
+    //     actions: [
+    //       TextButton(
+    //         onPressed: () => Navigator.of(ctx).pop(false),
+    //         child: Text(S.of(context).dialogCancelLabel),
+    //       ),
+    //       FilledButton(
+    //         onPressed: () => Navigator.of(ctx).pop(true),
+    //         child: Text(S.of(context).dialogDeleteLabel),
+    //       ),
+    //     ],
+    //   ),
+    // );
+    final loaded = _bloc.state;
+    if (loaded is! RecipeDetailLoaded) return;
+    final confirmed = await confirmDeleteRecipes(context, [loaded.recipe]);
+    _deleting = loaded.recipe;
+    // [/fork]
     if (confirmed == true) {
       _bloc.add(const DeleteRecipeFromDetailEvent());
     }

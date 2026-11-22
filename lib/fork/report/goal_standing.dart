@@ -11,7 +11,7 @@ enum GoalStanding {
   /// A target not met yet: grey.
   toReach,
 
-  /// A limit not passed: grey.
+  /// A limit not passed: green, as a goal met is.
   under,
 
   /// A limit passed, or energy above its band: red.
@@ -20,8 +20,8 @@ enum GoalStanding {
 
 /// Where [perDay] stands against [goal]. A [isBand] goal (energy, carbs,
 /// fat) is reached within [onTargetShare] of it either way and over above
-/// that, as the weekly report's energy reads. A limit or band with no goal is not
-/// over; a target with none is not reached.
+/// that, as the weekly report's energy reads. A band with no goal is not
+/// over; a target or limit with none is not reached, so not green.
 GoalStanding goalStanding({
   required bool isLimit,
   required double perDay,
@@ -29,9 +29,8 @@ GoalStanding goalStanding({
   bool isBand = false,
 }) {
   if (isLimit) {
-    return perDay > (goal ?? double.infinity)
-        ? GoalStanding.over
-        : GoalStanding.under;
+    if (goal == null) return GoalStanding.toReach;
+    return perDay > goal ? GoalStanding.over : GoalStanding.under;
   }
   if (goal == null || goal <= 0) return GoalStanding.toReach;
   if (isBand) {
@@ -51,8 +50,8 @@ Color goalStandingColor(
   AppPalette palette,
   ColorScheme scheme,
 ) => switch (standing) {
-  GoalStanding.reached => palette.accent,
-  GoalStanding.toReach || GoalStanding.under => palette.textMuted,
+  GoalStanding.reached || GoalStanding.under => palette.accent,
+  GoalStanding.toReach => palette.textMuted,
   GoalStanding.over => scheme.error,
 };
 
@@ -64,14 +63,15 @@ String? goalStandingWord(
   bool isBand = false,
 }) => switch (standing) {
   GoalStanding.reached => isBand ? 'on target' : 'reached',
+  GoalStanding.under => 'within limit',
   GoalStanding.over => isLimit ? 'over the limit' : 'over',
-  _ => null,
+  GoalStanding.toReach => null,
 };
 
 /// The key under every list coloured by [goalStandingColor].
 const goalStandingKey =
-    'Green: reached, or on target. Red: over. Grey: not there yet, '
-    'or under a limit.';
+    'Green: reached, on target, or within a limit. Red: over. Grey: not '
+    'there yet.';
 
 /// The range a nutrient page averages over: "Oct 23 – Nov 21 · 30 days,
 /// 28 logged", for [locale].

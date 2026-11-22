@@ -29,6 +29,7 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   late final TextEditingController _nameController;
   late String? _imagePath;
   Future<({String name, String profileUrl})?>? _imageCredit;
+  String? _nameError; // [fork] S439 profile-editor-name-required
 
   @override
   void initState() {
@@ -89,10 +90,16 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
             child: TextField(
               controller: _nameController,
               textCapitalization: TextCapitalization.words,
+              // [fork] S439 profile-editor-name-required
+              onChanged: (_) {
+                if (_nameError != null) setState(() => _nameError = null);
+              },
+              // [/fork]
               decoration: InputDecoration(
                 labelText: s.profileNameLabel,
                 hintText: s.profileNameHint,
                 border: const OutlineInputBorder(),
+                errorText: _nameError, // [fork] S439 profile-editor-name-required
               ),
             ),
           ),
@@ -139,6 +146,13 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
   }
 
   Future<void> _onSave() async {
+    // [fork] S439 profile-editor-name-required: a blank name, as Add
+    // profile refuses (S302), would show as "Profile 1" (H5)
+    if (_nameController.text.trim().isEmpty) {
+      setState(() => _nameError = 'Enter a name');
+      return;
+    }
+    // [/fork]
     final toSave = ProfileEntity(
       id: widget.profile.id,
       name: _nameController.text.trim(),
