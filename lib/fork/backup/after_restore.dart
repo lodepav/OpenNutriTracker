@@ -20,6 +20,13 @@ Future<void> afterRestore(
 }) async {
   // First, while the context is sure to be mounted.
   final settings = applyRestoredSettings(context);
+  // Any restore, a CSV one too, wrote real data: the profile is no longer a
+  // demo, so leaving the demo can't wipe it.
+  try {
+    await syncRestoredDemoMark();
+  } catch (error, stack) {
+    _log.warning('Could not end the demo after the restore', error, stack);
+  }
   // The rest only once a restore wrote the fork's files.
   if (!BackupExtras.restored) return settings;
   BackupExtras.restored = false;
@@ -27,11 +34,6 @@ Future<void> afterRestore(
     await (backup ?? AutoBackup.instance).markRestoredWhileOff();
   } catch (error, stack) {
     _log.warning('Could not note the restore', error, stack);
-  }
-  try {
-    await syncRestoredDemoMark();
-  } catch (error, stack) {
-    _log.warning('Could not show the restored demo mark', error, stack);
   }
   try {
     await (reminders ?? Reminders()).askIfSilent();

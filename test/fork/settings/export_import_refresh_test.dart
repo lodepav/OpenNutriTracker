@@ -37,13 +37,19 @@ class _ExportImportBloc extends Fake implements ExportImportBloc {
   /// When set, an import stays loading until it completes.
   Completer<void>? hold;
 
+  /// When set, an import ends in this state, as a cancelled picker does.
+  ExportImportState? importEnd;
+
   @override
   void add(ExportImportEvent event) {
     if (event is ResetExportImportStateEvent) _emit(ExportImportInitial());
     if (event is ExportDataEvent || event is ImportDataEvent) {
       _emit(ExportImportLoadingState());
       final wait = hold;
-      if (wait == null) {
+      final end = importEnd;
+      if (event is ImportDataEvent && end != null) {
+        _emit(end);
+      } else if (wait == null) {
         _emit(ExportImportSuccess());
       } else {
         wait.future.then((_) => _emit(ExportImportSuccess()));
@@ -161,6 +167,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(_events.whereType<LoadItemsEvent>(), hasLength(1));
     expect(_events.whereType<LoadTrendsEvent>(), isEmpty);
+  });
+
+  testWidgets('a cancelled import reloads nothing', (tester) async {
+    (locator<ExportImportBloc>() as _ExportImportBloc).importEnd =
+        ExportImportInitial();
+    await pumpDialog(tester);
+    await tester.tap(find.text('Import'));
+    await tester.pumpAndSettle();
+    expect(_events, isEmpty);
   });
 
   testWidgets('a finished export reloads nothing', (tester) async {
