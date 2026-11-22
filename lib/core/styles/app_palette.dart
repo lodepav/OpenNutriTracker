@@ -139,8 +139,8 @@ class AppPalette {
         onTertiary: onAccent,
         tertiaryContainer: surfaceMuted,
         onTertiaryContainer: textStrong,
-        // [fork] S468 error-contrast: C4453A read 4.49:1 on the canvas
-        error: brightness == Brightness.light ? const Color(0xFFC24439) : const Color(0xFFFFB4AB),
+        // [fork] S468 error-contrast: C4453A read 4.49:1 on the canvas, C24439 4.19:1 on a filled field
+        error: brightness == Brightness.light ? const Color(0xFFB94136) : const Color(0xFFFFB4AB),
         // error: brightness == Brightness.light ? const Color(0xFFC4453A) : const Color(0xFFFFB4AB),
         // [/fork]
         onError: brightness == Brightness.light ? Colors.white : const Color(0xFF690005),

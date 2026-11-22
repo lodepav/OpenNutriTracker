@@ -18,6 +18,7 @@ CheckInRecord _full(
   required double proposed,
   required double set,
   double rate = -0.5,
+  double target = 75,
 }) => CheckInRecord(
   date: DateTime(2026, 11, day),
   expenditureKcal: base,
@@ -26,7 +27,7 @@ CheckInRecord _full(
   activityKcal: 0,
   baseKcal: base,
   goalRateKgPerWeek: rate,
-  targetWeightKg: 75,
+  targetWeightKg: target,
   basis: 'expenditure',
 );
 
@@ -90,5 +91,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Why it moved from Nov 14'), findsOneWidget);
     expect(find.text('Pace went from −0.5 to 0.0 kg a week.'), findsOne);
+  });
+
+  testWidgets('why it moved: the notes sit 12 apart, the inset once below', (
+    tester,
+  ) async {
+    tester.view.padding = const FakeViewPadding(bottom: 144);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CheckInHistoryScreen(
+          store: _Store([
+            _full(14, base: 3000, proposed: 2500, set: 2500),
+            _full(21, base: 3000, proposed: 2900, set: 2900, rate: 0, target: 70),
+          ]),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('check-in-2026-11-21')));
+    await tester.pumpAndSettle();
+    final pace = tester.getBottomLeft(
+      find.text('Pace went from −0.5 to 0.0 kg a week.'),
+    );
+    final target = tester.getTopLeft(
+      find.textContaining('Target weight went from'),
+    );
+    expect(target.dy - pace.dy, 12);
   });
 }

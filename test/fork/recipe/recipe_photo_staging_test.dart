@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/fork/recipe/recipe_builder.dart';
 import 'package:get_it/get_it.dart';
 import 'package:opennutritracker/core/data/repository/config_repository.dart';
 import 'package:opennutritracker/core/data/data_source/custom_meal_data_source.dart';
@@ -254,6 +255,29 @@ void main() {
       await choose(tester, recipeTile(), 'Choose from gallery');
       expect(find.text('Could not add the photo'), findsOneWidget);
     });
+  });
+
+  testWidgets('a cleared amount on the screen keeps Save off', (tester) async {
+    await open(tester, _recipePhoto, builder);
+    Finder save() => find.byType(BuilderSaveBar);
+    bool saveOn() =>
+        tester
+            .widget<FilledButton>(
+              find.descendant(of: save(), matching: find.byType(FilledButton)),
+            )
+            .onPressed !=
+        null;
+    expect(saveOn(), isTrue);
+    final amount = find.descendant(
+      of: find.byType(BuilderIngredientRow).first,
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(amount, '');
+    await tester.pump();
+    expect(saveOn(), isFalse);
+    await tester.enterText(amount, '50');
+    await tester.pump();
+    expect(saveOn(), isTrue);
   });
 
   group('custom food editor', () {

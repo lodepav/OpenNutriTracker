@@ -24,6 +24,7 @@ abstract final class LeftoverStrings {
   static const title = 'Left over from the meal';
   static const hint = 'Pick what share is left, then adjust any item.';
   static const left = 'Left';
+  static String leftOf(String food) => food.isEmpty ? left : 'Left of $food';
   static const save = 'Save';
   static const cancel = 'Cancel';
   static const readPhoto = "Photo of what's left";
@@ -302,7 +303,7 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                         children: [
                           Text(
                             intake.meal.name ?? '',
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
@@ -327,7 +328,14 @@ class _GroupLeftoversDialogState extends State<GroupLeftoversDialog> {
                         onChanged: (text) => _override(intake.id, text),
                         decoration: InputDecoration(
                           isDense: true,
-                          labelText: LeftoverStrings.left,
+                          // Shown short beside the name, said with it.
+                          label: Semantics(
+                            label: LeftoverStrings.leftOf(
+                              intake.meal.name ?? '',
+                            ),
+                            excludeSemantics: true,
+                            child: const Text(LeftoverStrings.left),
+                          ),
                           hintText: '0',
                           suffixText: _shown[intake.id]!.unit,
                         ),

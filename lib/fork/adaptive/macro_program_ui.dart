@@ -169,7 +169,10 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           onChanged: (v) => setState(() => _on = v),
         ),
         if (_on) ...[
-          Text('Protein', style: theme.textTheme.titleSmall),
+          Semantics(
+            header: true,
+            child: Text('Protein', style: theme.textTheme.titleSmall),
+          ),
           Wrap(
             spacing: 6,
             children: [
@@ -233,7 +236,10 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
             }),
           ),
           const SizedBox(height: 8),
-          Text('Fat', style: theme.textTheme.titleSmall),
+          Semantics(
+            header: true,
+            child: Text('Fat', style: theme.textTheme.titleSmall),
+          ),
           Wrap(
             spacing: 6,
             children: [

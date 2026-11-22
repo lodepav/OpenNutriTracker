@@ -243,6 +243,25 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
   });
 
+  testWidgets('the confirm is a filled button in the error colour', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(400, 3000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(section: SettingsSection.data));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10nEn.settingsDeleteAllDataLabel));
+    await tester.pumpAndSettle();
+    final label = find.text(l10nEn.settingsDeleteAllDataConfirmAction);
+    final confirm = tester.widget<FilledButton>(
+      find.ancestor(of: label, matching: find.byType(FilledButton)),
+    );
+    expect(
+      confirm.style?.backgroundColor?.resolve(const {}),
+      Theme.of(tester.element(label)).colorScheme.error,
+    );
+  });
+
   testWidgets('the AI row says a saved key was not checked', (tester) async {
     final credentials = locator<AiCredentialStorage>();
     await credentials.setTermsAccepted(true);

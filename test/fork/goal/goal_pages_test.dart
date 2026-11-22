@@ -266,6 +266,86 @@ void main() {
     expect(store.goals.single.endKg, 79.9);
   });
 
+  testWidgets('goal reached: a failed save says so and Continue works again', (
+    tester,
+  ) async {
+    final plan = _cut(breaks: false);
+    await _pump(
+      tester,
+      GoalReachedPage(
+        plan: plan,
+        nowKg: 79.9,
+        unit: BodyWeightUnit.kg,
+        today: DateTime(2027, 1, 4),
+        load: (_) async => GoalRun(
+          trend: [for (var i = 0; i < 91; i++) 86.4 - 6.5 * i / 90],
+          first: _start,
+          meanKcal: 2010,
+          loggedShare: 0.92,
+          onTargetShare: 0.8,
+          expenditureKcal: 2560,
+        ),
+        actions: GoalActions(
+          store: _MemoryPhases(plan),
+          save: (_, _) async => throw StateError('disk full'),
+          clock: () => DateTime(2027, 1, 4),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Not saved. Try again.'), findsOneWidget);
+    expect(find.byType(GoalReachedPage), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.ancestor(
+              of: find.text('Continue'),
+              matching: find.byType(FilledButton),
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('extend: a failed save says so and Extend works again', (
+    tester,
+  ) async {
+    final plan = _cut(breaks: false);
+    await _pump(
+      tester,
+      Scaffold(
+        body: ExtendSheet(
+          plan: plan,
+          nowKg: 80.8,
+          unit: BodyWeightUnit.kg,
+          ended: true,
+          today: plan.end,
+          actions: GoalActions(
+            store: _MemoryPhases(plan),
+            save: (_, _) async => throw StateError('disk full'),
+            clock: () => plan.end,
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Extend'));
+    await tester.pumpAndSettle();
+    expect(find.text('Not saved. Try again.'), findsOneWidget);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.ancestor(
+              of: find.text('Extend'),
+              matching: find.byType(FilledButton),
+            ),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
   testWidgets('an ended goal extends until its target', (tester) async {
     final plan = _cut(breaks: false);
     final store = _MemoryPhases(plan);

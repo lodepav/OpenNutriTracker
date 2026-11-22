@@ -629,8 +629,12 @@ class _DurationSheetState extends State<DurationSheet> {
                   icon: const Icon(Icons.remove_rounded),
                 ),
               ),
+              // The digits' part grows with the text, so three show whole
+              // (A6) and the steppers still fit a 360 dp phone at 200%.
               SizedBox(
-                width: 120,
+                width:
+                    40 +
+                    MediaQuery.textScalerOf(context).scale(80).clamp(80, 160),
                 child: Column(
                   children: [
                     Semantics(

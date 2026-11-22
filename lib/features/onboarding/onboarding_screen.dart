@@ -35,6 +35,7 @@ import 'package:opennutritracker/fork/goal/onboarding_goal.dart';
 import 'package:opennutritracker/fork/onboarding/onboarding_back.dart'; // [fork] S332
 import 'package:opennutritracker/fork/onboarding/overview_grams.dart'; // [fork] S333
 import 'package:opennutritracker/fork/onboarding/start_failure.dart'; // [fork] S466
+import 'package:opennutritracker/fork/onboarding/welcome_title.dart'; // [fork] S464
 
 /// The onboarding pages, in the order they are shown.
 ///
@@ -245,7 +246,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final selection = _onboardingBloc.userSelection;
     final pages = <PageViewModel>[
       PageViewModel(
-        title: S.of(context).onboardingWelcomeLabel,
+        // [fork] S464 step-headings: a heading TalkBack can jump to
+        titleWidget: WelcomeTitle(
+          S.of(context).onboardingWelcomeLabel,
+          style: _pageDecoration.titleTextStyle,
+        ),
+        // title: S.of(context).onboardingWelcomeLabel,
+        // [/fork]
         decoration: _pageDecoration,
         image: _defaultImageWidget,
         bodyWidget: OnboardingIntroPageBody(

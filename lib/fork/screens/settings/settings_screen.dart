@@ -87,6 +87,8 @@ import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/update/update_notice.dart';
 import 'package:opennutritracker/fork/version.dart';
 import 'package:opennutritracker/fork/report/nutrient_goals_overview.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';

@@ -144,7 +144,19 @@ void main() {
       ..registerSingleton<GetConfigUsecase>(_Config())
       ..registerSingleton<DeleteRecipeUseCase>(_DeleteRecipe())
       ..registerSingleton<CacheManager>(_CacheManager());
-    await pump(tester, const RecipesPage());
+    await pump(
+      tester,
+      Builder(
+        builder: (context) => TextButton(
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const RecipesPage())),
+          child: const Text('open'),
+        ),
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
   }
 
   testWidgets('in selection mode a recipe says it is selected, and what a '
@@ -173,6 +185,24 @@ void main() {
       ),
     );
     semantics.dispose();
+  });
+
+  testWidgets('Back in selection mode clears the selection, then leaves', (
+    tester,
+  ) async {
+    await pumpRecipes(tester);
+    await tester.longPress(find.text('Oat Bowl'));
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.selectionCountLabel(1)), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text(l10nEn.selectionCountLabel(1)), findsNothing);
+    expect(find.byType(RecipesPage), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(RecipesPage), findsNothing);
   });
 
   testWidgets('the selection bar reads with a yellow accent', (tester) async {

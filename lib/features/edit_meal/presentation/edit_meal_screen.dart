@@ -57,6 +57,7 @@ import 'package:provider/provider.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:opennutritracker/fork/widget/toolbar_height.dart'; // [fork] S132
 import 'package:opennutritracker/fork/edit_meal/simple_form.dart'; // [fork] S188
+import 'package:opennutritracker/fork/scan/scanner_error.dart'; // [fork] S520
 
 class EditMealScreen extends StatefulWidget {
   const EditMealScreen({super.key});
@@ -1538,7 +1539,19 @@ class _EditMealBarcodeScanPageState extends State<_EditMealBarcodeScanPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(S.of(context).customMealBarcodeScanButton)),
-      body: MobileScanner(controller: _controller, onDetect: _onDetect),
+      // [fork] S520 edit-meal-scanner-error: the fork's message, and back to
+      // the code field as the way around, not the package's black box
+      body: MobileScanner(
+        controller: _controller,
+        onDetect: _onDetect,
+        errorBuilder: (context, error) => ScannerError(
+          error: error,
+          controller: _controller,
+          onPaste: () => Navigator.of(context).pop(),
+        ),
+      ),
+      // body: MobileScanner(controller: _controller, onDetect: _onDetect),
+      // [/fork]
     );
   }
 }

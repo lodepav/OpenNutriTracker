@@ -243,6 +243,29 @@ void main() {
       expect(find.byKey(const ValueKey('photo-old0')), findsNothing);
     });
 
+    testWidgets('the viewer has Close on the right; the confirm\'s Delete '
+        'is filled in the error colour', (tester) async {
+      await pump(tester, photos: 1);
+
+      await tester.tap(find.byKey(const ValueKey('photo-old0')));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getCenter(find.text('Close')).dx,
+        greaterThan(
+          tester.getCenter(find.byKey(const ValueKey('photo-delete'))).dx,
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('photo-delete')));
+      await tester.pumpAndSettle();
+      final confirm = find.byKey(const ValueKey('photo-delete-confirm'));
+      expect(
+        tester.widget<FilledButton>(confirm).style?.backgroundColor?.resolve(
+          const {},
+        ),
+        Theme.of(tester.element(confirm)).colorScheme.error,
+      );
+    });
+
     testWidgets('at 200% text each date stays within its photo', (
       tester,
     ) async {

@@ -79,6 +79,17 @@ String hoursMinutes(Duration d) {
   return '${m ~/ 60}h ${(m % 60).toString().padLeft(2, '0')}m';
 }
 
+/// [hoursMinutes] as TalkBack should say it: "10 hours 59 minutes".
+String hoursMinutesSpoken(Duration d) {
+  final m = d.isNegative ? 0 : d.inMinutes;
+  final h = m ~/ 60;
+  final rest = m % 60;
+  return [
+    if (h > 0) '$h ${h == 1 ? 'hour' : 'hours'}',
+    if (rest > 0 || h == 0) '$rest ${rest == 1 ? 'minute' : 'minutes'}',
+  ].join(' ');
+}
+
 /// Seam S123: the fasting timer as MacroFactor's (FastingA): a ring with
 /// the time left and beside it the time fasted, when it started (which can
 /// be moved) and ends, the plan, the last seven fasts against their
@@ -326,6 +337,9 @@ class _Timer extends StatelessWidget {
                             children: [
                               Text(
                                 hoursMinutes(active.remaining),
+                                semanticsLabel: hoursMinutesSpoken(
+                                  active.remaining,
+                                ),
                                 style: text.titleLarge?.copyWith(
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -358,6 +372,7 @@ class _Timer extends StatelessWidget {
                       ),
                       Text(
                         hoursMinutes(active.elapsed),
+                        semanticsLabel: hoursMinutesSpoken(active.elapsed),
                         style: text.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),

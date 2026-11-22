@@ -96,7 +96,16 @@ class _RecipesPageState extends State<RecipesPage>
     // Standalone pushed screen (reached from Add and from You): it owns its
     // Scaffold + AppBar, so the title bar clears the status bar / notch on
     // iPhone and the create/import actions live where you'd expect them.
-    return Scaffold(
+    // [fork] S522 recipes-back-clears: in selection mode Back clears the
+    // selection, as the close button does, and the page stays
+    return PopScope(
+      canPop: !_selectionMode,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) setState(_selectedIds.clear);
+      },
+      child: Scaffold(
+    // return Scaffold(
+    // [/fork]
       appBar: AppBar(
         // [fork] S429 custom-foods-empty: the title names the list shown
         // title: Text(S.of(context).recipesLabel),
@@ -172,6 +181,7 @@ class _RecipesPageState extends State<RecipesPage>
       // [fork] S130 recipes-list: the list's own actions at the bottom
       bottomNavigationBar: _buildFooter(context),
       // [/fork]
+    ), // [fork] S522
     );
   }
 

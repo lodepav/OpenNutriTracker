@@ -278,4 +278,39 @@ void main() {
     expect(hoursMinutes(const Duration(hours: 10, minutes: 59)), '10h 59m');
     expect(hoursMinutes(const Duration(minutes: -5)), '0h 00m');
   });
+
+  test('hoursMinutesSpoken says the words TalkBack reads', () {
+    expect(
+      hoursMinutesSpoken(const Duration(hours: 10, minutes: 59)),
+      '10 hours 59 minutes',
+    );
+    expect(
+      hoursMinutesSpoken(const Duration(hours: 1, minutes: 1)),
+      '1 hour 1 minute',
+    );
+    expect(hoursMinutesSpoken(const Duration(hours: 16)), '16 hours');
+    expect(hoursMinutesSpoken(const Duration(minutes: -5)), '0 minutes');
+  });
+
+  testWidgets('the ring and the time fasted are spoken in words', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _pump(
+      tester,
+      FastingActive(
+        session: _fast('now', DateTime(2026, 10, 25, 5, 0)),
+        now: _now,
+      ),
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'^10 hours 59 minutes\nleft$')),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(RegExp(r'^Fasting for\n5 hours 1 minute\n')),
+      findsOneWidget,
+    );
+    handle.dispose();
+  });
 }

@@ -14,6 +14,8 @@ import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/fork/photos/photo_store.dart';
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
 import 'package:opennutritracker/fork/trends/card_title.dart';
 
 /// Takes or picks a photo, scaled down to keep backups small; null when
@@ -189,8 +191,9 @@ class _ProgressPhotosCardState extends State<ProgressPhotosCard> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             key: const ValueKey('photo-delete-confirm'),
+            style: destructiveFilledStyle(context),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete'),
           ),

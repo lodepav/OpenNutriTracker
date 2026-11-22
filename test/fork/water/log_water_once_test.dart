@@ -78,18 +78,20 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     await _open(tester);
-    expect(find.semantics.byValue('250 ml'), findsOne);
+    expect(find.semantics.byValue('250 millilitres'), findsOne);
+    expect(find.bySemanticsLabel('Add 250 millilitres'), findsOne);
 
     await tester.tap(find.text('Clear'));
     await tester.pumpAndSettle();
-    expect(find.semantics.byValue('0 ml'), findsOne);
+    expect(find.semantics.byValue('0 millilitres'), findsOne);
     semantics.dispose();
   });
 
   testWidgets('in fl oz with imperial units', (tester) async {
     final semantics = tester.ensureSemantics();
     await _open(tester, imperial: true);
-    expect(find.semantics.byValue('8 fl.oz'), findsOne);
+    expect(find.semantics.byValue('8 fluid ounces'), findsOne);
+    expect(find.bySemanticsLabel('Add 8 fluid ounces'), findsOne);
     semantics.dispose();
   });
 }

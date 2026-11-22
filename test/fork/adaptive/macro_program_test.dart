@@ -607,4 +607,27 @@ void main() {
       expect(OnboardingMacros.pending.value, isNull);
     },
   );
+
+  testWidgets('Protein and Fat are headings', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MacroProgramForm(
+              const MacroProgram(),
+              onChanged: (_, _) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    for (final title in ['Protein', 'Fat']) {
+      expect(
+        tester.getSemantics(find.text(title)),
+        isSemantics(label: title, isHeader: true),
+      );
+    }
+    semantics.dispose();
+  });
 }

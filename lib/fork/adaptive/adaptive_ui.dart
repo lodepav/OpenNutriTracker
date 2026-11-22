@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/data/repository/user_repository.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
@@ -135,6 +136,10 @@ String todayGoalText(
 /// Why today's goal moves when a check-in's target leaves out the logged
 /// activity Home added to it; said on the check-in and in its bar.
 const activityDroppedText = '(activity no longer added)';
+
+/// The most a typed check-in target may be: no kcal goal in the app has a
+/// ceiling, and none above this is a daily intake.
+const maxTypedTargetKcal = 10000.0;
 
 /// The bar after a check-in is done: today's goal, shown [before] and
 /// [after], in [unit], and why when [activityDropped].
@@ -687,10 +692,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
       persist = undoBarPersists(context);
       before = await service.checkIns();
       await service.accept(checkIn, targetKcal);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      Logger('CheckInScreen').severe('Check-in save failed', error, stackTrace);
       // kept off once saved, as the screen leaves
-      if (mounted) setState(() => _accepting = false);
-      rethrow;
+      if (mounted) {
+        setState(() => _accepting = false);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Not saved. Try again.')));
+      }
+      return;
     }
     final move = _goalMove(now, targetKcal, shown);
     messenger.removeCurrentSnackBar();
@@ -1225,9 +1236,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
   double? _typedTarget(CheckIn checkIn, int proposed) {
     final typed = double.tryParse(_target.text.trim());
     if (typed == null || !typed.isFinite || typed <= 0) return null;
-    return typed == proposed
+    final kcal = typed == proposed
         ? checkIn.proposedTargetKcal
         : kcalFromInput(context, typed);
+    return kcal > maxTypedTargetKcal ? null : kcal;
   }
 
   /// Accept, and Keep below it while there is a target in use; above the
@@ -1243,6 +1255,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
     final kj = usesKj(context);
     int shown(double kcal) => (kj ? UnitCalc.kcalToKj(kcal) : kcal).round();
     final keepText = current == null ? '' : _kcal(current);
+    final mostText = _kcal(maxTypedTargetKcal);
     return SafeArea(
       top: false,
       child: Padding(
@@ -1267,9 +1280,15 @@ class _CheckInScreenState extends State<CheckInScreen> {
                             'Enter a daily target above 0 $unit.';
                         return;
                       }
+                      final kcal = kcalFromInput(context, typed);
+                      if (kcal > maxTypedTargetKcal) {
+                        _targetError.value =
+                            'Enter a daily target up to $mostText.';
+                        return;
+                      }
                       await _done(
                         checkIn,
-                        kcalFromInput(context, typed),
+                        kcal,
                         'Daily target set to ${_target.text.trim()} $unit',
                         unit: unit,
                         shown: shown,

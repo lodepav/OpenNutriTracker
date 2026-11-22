@@ -320,6 +320,26 @@ void main() {
       expect(updates, {'rice': 100, 'curry': 150});
     });
 
+    testWidgets('each field names its food, and a name can wrap', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tap(tester, _curry);
+      await openWholeMeal(tester);
+
+      expect(
+        tester.getSemantics(
+          find.descendant(
+            of: find.byKey(const ValueKey('left-curry')),
+            matching: find.byType(EditableText),
+          ),
+        ),
+        isSemantics(label: 'Left of Curry', isTextField: true),
+      );
+      expect(tester.widget<Text>(find.text('Curry')).maxLines, 2);
+      semantics.dispose();
+    });
+
     testWidgets('in imperial units the amounts are ounces, typed and shown', (
       tester,
     ) async {

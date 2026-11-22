@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
+import 'package:logging/logging.dart';
 import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart';
 import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
@@ -194,25 +195,36 @@ class _GoalReachedPageState extends State<GoalReachedPage> {
     setState(() => _busy = true);
     var done = false;
     var applied = true;
-    switch (_next) {
-      case _Next.maintain:
-        done = await _actions.complete(widget.plan, widget.nowKg);
-        if (done) applied = await (widget.applyTarget ?? applyGoalTarget)();
-      case _Next.extend:
-        done = await showExtendSheet(
+    try {
+      switch (_next) {
+        case _Next.maintain:
+          done = await _actions.complete(widget.plan, widget.nowKg);
+          if (done) applied = await (widget.applyTarget ?? applyGoalTarget)();
+        case _Next.extend:
+          done = await showExtendSheet(
+            context,
+            widget.plan,
+            widget.nowKg,
+            widget.unit,
+            ended: false,
+            actions: _actions,
+          );
+        case _Next.planNext:
+          done = await _actions.complete(widget.plan, widget.nowKg);
+          if (done && mounted) await openGoalPlanner(context, fresh: true);
+      }
+    } catch (error, stackTrace) {
+      Logger('GoalReachedPage').severe('Goal save failed', error, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(
           context,
-          widget.plan,
-          widget.nowKg,
-          widget.unit,
-          ended: false,
-          actions: _actions,
-        );
-      case _Next.planNext:
-        done = await _actions.complete(widget.plan, widget.nowKg);
-        if (done && mounted) await openGoalPlanner(context, fresh: true);
+        ).showSnackBar(const SnackBar(content: Text('Not saved. Try again.')));
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
     if (!mounted) return;
-    setState(() => _busy = false);
     if (done) {
       // Shown from here, it stays up on the page this one returns to.
       if (_next == _Next.maintain) {
@@ -627,9 +639,21 @@ class _ExtendSheetState extends State<ExtendSheet> {
 
   Future<void> _save(Future<bool> Function() action) async {
     setState(() => _busy = true);
-    final done = await action();
+    final bool done;
+    try {
+      done = await action();
+    } catch (error, stackTrace) {
+      Logger('ExtendSheet').severe('Goal save failed', error, stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Not saved. Try again.')));
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     if (!mounted) return;
-    setState(() => _busy = false);
     if (done) {
       Navigator.of(context).pop(true);
     } else {
