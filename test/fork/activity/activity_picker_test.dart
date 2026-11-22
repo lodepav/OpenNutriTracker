@@ -243,6 +243,39 @@ void main() {
     expect(ActivityCredit.dailyCapped.raisesGoal, isTrue);
   });
 
+  testWidgets('three typed digits fit the field at 200% text', (tester) async {
+    await pumpOnPhone(
+      tester,
+      ChangeNotifierProvider(
+        create: (_) => EnergyUnitProvider(),
+        child: DurationSheet(
+          activity: _yoga,
+          user: _user,
+          day: _day,
+          today: _day,
+        ),
+      ),
+    );
+    // a 360 dp phone, the narrowest common one
+    tester.view.physicalSize = const Size(945, 2340);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    final field = find.descendant(
+      of: find.bySemanticsIdentifier('activity-duration-field'),
+      matching: find.byType(EditableText),
+    );
+    await tester.enterText(field, '120');
+    await tester.pump();
+    final editable = tester.widget<EditableText>(field);
+    final digits = TextPainter(
+      text: TextSpan(text: '120', style: editable.style),
+      textScaler: MediaQuery.textScalerOf(tester.element(field)),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    expect(tester.getSize(field).width, greaterThanOrEqualTo(digits.width));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('down to five minutes and no lower', (tester) async {
     await _pump(tester);
     await _tap(tester, 'add-activity-row-02160');

@@ -63,6 +63,9 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
   // [fork] S478 photo-staging: a picked or removed photo waits for Save (H3)
   final _forkPhoto = StagedPhoto(UserImageKind.recipe);
   // [/fork]
+  // [fork] S127 recipe-builder: rows whose amount is cleared or 0 keep Save off
+  final _forkBadAmounts = <int>{};
+  // [/fork]
 
   @override
   void initState() {
@@ -228,7 +231,18 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
                       ),
                     ),
                     onEdit: () => _onEditIngredient(context, i),
-                    onRemove: () => _bloc.add(RemoveIngredientEvent(i)),
+                    onValid: (ok) => setState(
+                      () => ok
+                          ? _forkBadAmounts.remove(i)
+                          : _forkBadAmounts.add(i),
+                    ),
+                    // Later rows get fresh, valid States once row i goes.
+                    onRemove: () {
+                      setState(
+                        () => _forkBadAmounts.removeWhere((b) => b >= i),
+                      );
+                      _bloc.add(RemoveIngredientEvent(i));
+                    },
                   ),
                   // [/fork]
                 ),
@@ -378,6 +392,7 @@ class _RecipeBuilderScreenState extends State<RecipeBuilderScreen> {
             saving: state.isSaving,
             onSave: () => _bloc.add(const SaveRecipeEvent()),
             editing: state.isExistingRecipe,
+            canSave: _forkBadAmounts.isEmpty,
           ),
           // [/fork]
           ),

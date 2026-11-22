@@ -27,6 +27,9 @@ extension _BulkAddDish on _BulkAddScreenState {
     }
     final dish = state.rows[heading.members.first].dishIngredient!.dish;
     final members = [for (final i in heading.members) state.rows[i]];
+    final name = dish.isEmpty
+        ? dish
+        : dish[0].toUpperCase() + dish.substring(1);
     final title = Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 0),
       child: Row(
@@ -34,7 +37,9 @@ extension _BulkAddDish on _BulkAddScreenState {
           Semantics(
             identifier: 'bulk-add-dish-fold',
             child: IconButton(
-              tooltip: folded ? DishStrings.showFoods : DishStrings.hideFoods,
+              tooltip:
+                  '${folded ? DishStrings.showFoods : DishStrings.hideFoods} '
+                  'in $name',
               icon: Icon(
                 folded ? Icons.expand_more_rounded : Icons.expand_less_rounded,
               ),
@@ -46,9 +51,7 @@ extension _BulkAddDish on _BulkAddScreenState {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AutoSizeText(
-                  dish.isEmpty
-                      ? dish
-                      : dish[0].toUpperCase() + dish.substring(1),
+                  name,
                   maxLines: 2,
                   minFontSize: 12,
                   overflow: TextOverflow.ellipsis,
@@ -75,7 +78,7 @@ extension _BulkAddDish on _BulkAddScreenState {
           Semantics(
             identifier: 'bulk-add-dish-menu',
             child: PopupMenuButton<VoidCallback>(
-              tooltip: 'Dish actions',
+              tooltip: 'Actions for $name',
               icon: Icon(
                 Icons.more_vert_rounded,
                 color: scheme.onSecondaryContainer,
@@ -105,7 +108,7 @@ extension _BulkAddDish on _BulkAddScreenState {
             style: _stepperStyle.merge(
               IconButton.styleFrom(backgroundColor: scheme.surface),
             ),
-            tooltip: 'Less',
+            tooltip: 'Less of $name',
             onPressed: grams > 0
                 ? () => _stepDish(group, grams, up: false)
                 : null,
@@ -151,7 +154,7 @@ extension _BulkAddDish on _BulkAddScreenState {
             style: _stepperStyle.merge(
               IconButton.styleFrom(backgroundColor: scheme.surface),
             ),
-            tooltip: 'More',
+            tooltip: 'More of $name',
             onPressed: grams > 0
                 ? () => _stepDish(group, grams, up: true)
                 : null,

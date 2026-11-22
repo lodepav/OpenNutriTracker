@@ -728,12 +728,16 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                child: Text(
-                  '${_editingGoal ? '' : 'Step ${_step + 1} of ${steps.length} · '}'
-                  '${_label(steps[_step])}'
-                  '${_detour == null ? '' : ' › ${_label(_detour!)}'}',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                // Live, so TalkBack says the new step on Next and Back.
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    '${_editingGoal ? '' : 'Step ${_step + 1} of ${steps.length} · '}'
+                    '${_label(steps[_step])}'
+                    '${_detour == null ? '' : ' › ${_label(_detour!)}'}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ),

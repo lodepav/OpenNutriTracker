@@ -4,6 +4,7 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
 import 'package:opennutritracker/generated/l10n.dart';
+import 'package:opennutritracker/fork/units/amount_text.dart'; // [fork] S473
 
 /// #32: simple "how much did you just drink?" dialog. A slider feels
 /// kinder than a numeric keypad for the common case where the person
@@ -86,6 +87,10 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
             widget.usesImperialUnits
                 ? s.logWaterAmountLabelFlOz(_selected.round())
                 : s.logWaterAmountLabel(_selected.round()),
+            // [fork] S473 water-slider-says: the unit said in words, not letters
+            semanticsLabel: 'Add ${_selected.round()} '
+                '${spokenUnit(widget.usesImperialUnits ? s.flOzUnit : s.mlLabel)}',
+            // [/fork]
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Theme.of(context).colorScheme.primary,
@@ -108,10 +113,10 @@ class _LogWaterDialogState extends State<LogWaterDialog> {
                   ? '${_selected.round()} ${s.flOzUnit}'
                   : '${_selected.round()} ${s.mlLabel}',
               // [fork] S473 water-slider-says: TalkBack read a percent while
-              // the dialog shows the amount
+              // the dialog shows the amount, its unit in words
               semanticFormatterCallback: (value) => widget.usesImperialUnits
-                  ? '${value.round()} ${s.flOzUnit}'
-                  : '${value.round()} ${s.mlLabel}',
+                  ? '${value.round()} ${spokenUnit(s.flOzUnit)}'
+                  : '${value.round()} ${spokenUnit(s.mlLabel)}',
               // [/fork]
               onChanged: (value) {
                 setState(() => _selected = value);

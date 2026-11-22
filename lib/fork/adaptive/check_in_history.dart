@@ -271,10 +271,7 @@ Future<void> _showParts(
               ),
               for (final n in notes)
                 Padding(
-                  padding: EdgeInsets.only(
-            top: 12,
-            bottom: MediaQuery.paddingOf(context).bottom,
-          ),
+                  padding: const EdgeInsets.only(top: 12),
                   child: Text(n, style: text.bodySmall),
                 ),
             ],

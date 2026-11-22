@@ -2347,11 +2347,23 @@ void main() {
       expect(double.parse(write.amount), closeTo(7 * 28.3495, 0.01));
     });
 
+    testWidgets('the dish controls name the dish', (tester) async {
+      await readDish(tester);
+      for (final tip in [
+        'Hide the foods in Chicken bowl',
+        'Actions for Chicken bowl',
+        'Less of Chicken bowl',
+        'More of Chicken bowl',
+      ]) {
+        expect(find.byTooltip(tip), findsOneWidget, reason: tip);
+      }
+    });
+
     testWidgets('folded, its foods are hidden and still logged', (
       tester,
     ) async {
       await readDish(tester);
-      await tester.tap(find.byTooltip(DishStrings.hideFoods));
+      await tester.tap(find.byTooltip('Hide the foods in Chicken bowl'));
       await tester.pumpAndSettle();
       expect(find.text('Chicken'), findsNothing);
 

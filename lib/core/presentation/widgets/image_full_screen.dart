@@ -41,9 +41,25 @@ class _ImageFullScreenState extends State<ImageFullScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(elevation: 0, backgroundColor: Colors.transparent),
+      // [fork] S521 full-photo-contained: all of the photo on black, the bar
+      // white over it, and a spoken name, as the review's photo viewer
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+      ),
+      // appBar: AppBar(elevation: 0, backgroundColor: Colors.transparent),
+      // [/fork]
       body: InteractiveViewer(
-        child: Hero(
+        // [fork] S521 full-photo-contained
+        child: Semantics(
+          image: true,
+          label: 'The food photo',
+          excludeSemantics: true,
+          child: Hero(
+        // child: Hero(
+        // [/fork]
           tag: ImageFullScreen.fullScreenHeroTag,
           // [fork] S408 food-photo-local
           // child: CachedNetworkImage(
@@ -55,7 +71,7 @@ class _ImageFullScreenState extends State<ImageFullScreen> {
                           File(snapshot.data!),
                           width: double.infinity,
                           height: double.infinity,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain, // [fork] S521
                           errorBuilder: (_, _, _) => const MealPlaceholder(),
                         )
                       : const MealPlaceholder(),
@@ -66,11 +82,15 @@ class _ImageFullScreenState extends State<ImageFullScreen> {
             height: double.infinity,
             cacheManager: locator<CacheManager>(),
             imageUrl: imageUrl,
-            fit: BoxFit.cover,
+            // [fork] S521 full-photo-contained
+            fit: BoxFit.contain,
+            // fit: BoxFit.cover,
+            // [/fork]
             placeholder: (context, string) => const MealPlaceholder(),
             errorWidget: (context, url, error) => const MealPlaceholder(),
           ),
         ),
+        ), // [fork] S521
       ),
     );
   }

@@ -33,6 +33,10 @@ String _amountText(double amount) => amount == amount.roundToDouble()
 class BuilderIngredientRow extends StatefulWidget {
   final RecipeIngredientEntity ingredient;
   final ValueChanged<double> onAmount;
+
+  /// Whether the typed amount is one the recipe can take, each time that
+  /// changes; Save waits while one is not.
+  final ValueChanged<bool>? onValid;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
 
@@ -40,6 +44,7 @@ class BuilderIngredientRow extends StatefulWidget {
     super.key,
     required this.ingredient,
     required this.onAmount,
+    this.onValid,
     required this.onEdit,
     required this.onRemove,
   });
@@ -53,14 +58,25 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
     text: _amountText(widget.ingredient.amount),
   );
 
+  /// The typed text is empty or 0, so the recipe keeps the amount before.
+  bool _bad = false;
+
   @override
   void didUpdateWidget(BuilderIngredientRow old) {
     super.didUpdateWidget(old);
     // The dialog changed it: show the new amount, unless it is the one
-    // being typed.
+    // being typed. Another rebuild leaves a cleared field as it is.
     final typed = double.tryParse(_amount.text.replaceAll(',', '.'));
-    if (typed != widget.ingredient.amount) {
+    if (widget.ingredient.amount != old.ingredient.amount &&
+        typed != widget.ingredient.amount) {
       _amount.text = _amountText(widget.ingredient.amount);
+      if (_bad) {
+        _bad = false;
+        // not during the parent's build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) widget.onValid?.call(true);
+        });
+      }
     }
   }
 
@@ -176,10 +192,17 @@ class _BuilderIngredientRowState extends State<BuilderIngredientRow> {
                   border: const OutlineInputBorder(
                     borderRadius: Dimens.borderRadiusS,
                   ),
+                  errorText: _bad ? 'More than 0' : null,
+                  errorMaxLines: 2,
                 ),
                 onChanged: (text) {
                   final amount = double.tryParse(text.replaceAll(',', '.'));
-                  if (amount != null && amount > 0) widget.onAmount(amount);
+                  final ok = amount != null && amount > 0;
+                  if (ok) widget.onAmount(amount);
+                  if (ok == _bad) {
+                    setState(() => _bad = !ok);
+                    widget.onValid?.call(ok);
+                  }
                 },
               ),
             ),
@@ -209,6 +232,9 @@ class BuilderSaveBar extends StatelessWidget {
   final bool saving;
   final VoidCallback onSave;
 
+  /// Off while an ingredient's typed amount is not one it can take.
+  final bool canSave;
+
   /// An existing recipe: says what saving does to portions logged.
   final bool editing;
 
@@ -218,6 +244,7 @@ class BuilderSaveBar extends StatelessWidget {
     required this.totalWeightG,
     required this.saving,
     required this.onSave,
+    this.canSave = true,
     this.editing = false,
   });
 
@@ -315,7 +342,7 @@ class BuilderSaveBar extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: saving ? null : onSave,
+                    onPressed: saving || !canSave ? null : onSave,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
                         vertical: Dimens.spacing16,

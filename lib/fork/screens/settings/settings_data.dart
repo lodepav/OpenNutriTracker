@@ -166,10 +166,8 @@ extension _DataSettings on _SettingsScreenState {
             onPressed: () => Navigator.of(ctx).pop(false),
             child: Text(l10n.dialogCancelLabel),
           ),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(ctx).colorScheme.error,
-            ),
+          FilledButton(
+            style: destructiveFilledStyle(ctx),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.settingsDeleteAllDataConfirmAction),
           ),

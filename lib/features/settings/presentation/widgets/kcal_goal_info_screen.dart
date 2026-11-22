@@ -28,6 +28,9 @@ import 'package:opennutritracker/fork/widget/toolbar_height.dart';
 // [fork] S450 goal-grams-rounded
 import 'package:opennutritracker/fork/onboarding/overview_grams.dart';
 // [/fork]
+// [fork] S531 goal-total-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 
 /// Transparency screen: shows every variable and intermediate step behind
 /// today's kcal goal, so the number on the home screen is fully auditable
@@ -534,7 +537,11 @@ class _ResultCard extends StatelessWidget {
             Text(
               EnergyDisplay.formatWithUnit(context, breakdown.totalKcalGoal),
               style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
+                // [fork] S531 goal-total-accent: a light picked accent read
+                // 1.4:1 as text on the card
+                color: textAccent(context),
+                // color: theme.colorScheme.primary,
+                // [/fork]
                 fontWeight: FontWeight.bold,
               ),
             ),

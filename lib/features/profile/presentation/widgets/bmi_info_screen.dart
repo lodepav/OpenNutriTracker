@@ -55,10 +55,15 @@ class _BmiInfoScreenState extends State<BmiInfoScreen> {
           final bmi = BMICalc.getBMI(user);
           final status = BMICalc.getNutritionalStatus(bmi);
           return ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Dimens.spacing16,
-              vertical: Dimens.spacing16,
+            // [fork] S510 bmi-info-bottom-inset: the last row clears the
+            // navigation bar, as explicit padding drops the inset
+            padding: EdgeInsets.fromLTRB(
+              Dimens.spacing16,
+              Dimens.spacing16,
+              Dimens.spacing16,
+              Dimens.spacing16 + MediaQuery.paddingOf(context).bottom,
             ),
+            // [/fork]
             children: [
               Text(
                 l10n.bmiInfo,

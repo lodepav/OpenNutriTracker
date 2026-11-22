@@ -61,12 +61,20 @@ class RestoreBackupButton extends StatefulWidget {
   /// Into the app; by default the tab blocs reload and the main route opens.
   final VoidCallback? onRestored;
 
+  /// Something else on the page is running (Try demo): the button is off.
+  final bool busy;
+
+  /// Told when a restore starts and ends, so the page can turn Try demo off.
+  final ValueChanged<bool>? onBusy;
+
   const RestoreBackupButton({
     super.key,
     required this.acceptedPolicy,
     required this.acceptedDataCollection,
     this.restore,
     this.onRestored,
+    this.busy = false,
+    this.onBusy,
   });
 
   @override
@@ -83,6 +91,7 @@ class _RestoreBackupButtonState extends State<RestoreBackupButton> {
 
   Future<void> _run() async {
     setState(() => _busy = true);
+    widget.onBusy?.call(true);
     try {
       if (!await _restore.importBackup()) return;
       if (!await _restore.hasProfile()) {
@@ -100,6 +109,7 @@ class _RestoreBackupButtonState extends State<RestoreBackupButton> {
       if (mounted) _say('That file could not be restored.');
     } finally {
       if (mounted) setState(() => _busy = false);
+      widget.onBusy?.call(false);
     }
   }
 
@@ -118,7 +128,7 @@ class _RestoreBackupButtonState extends State<RestoreBackupButton> {
       width: double.infinity,
       child: OutlinedButton.icon(
         key: const Key('fork-onboarding-restore'),
-        onPressed: _busy
+        onPressed: _busy || widget.busy
             ? null
             : (widget.acceptedPolicy
                   ? _run

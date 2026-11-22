@@ -308,6 +308,25 @@ void main() {
       expect(await answer, isTrue);
     });
 
+    testWidgets('Replace is a filled button in the error colour', (
+      tester,
+    ) async {
+      await open(tester);
+      final answer = usecase.forkConfirmImport!();
+      await tester.pumpAndSettle();
+      final label = find.text('Replace');
+      final replace = tester.widget<FilledButton>(
+        find.ancestor(of: label, matching: find.byType(FilledButton)),
+      );
+      expect(
+        replace.style?.backgroundColor?.resolve(const {}),
+        Theme.of(tester.element(label)).colorScheme.error,
+      );
+      await tester.tap(label);
+      await tester.pumpAndSettle();
+      expect(await answer, isTrue);
+    });
+
     testWidgets('Import asks once the file is picked; Cancel keeps the data',
         (tester) async {
       await open(tester);

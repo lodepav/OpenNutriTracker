@@ -16,6 +16,11 @@ import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.d
 // [fork] S38 restore-settings-live: import
 import 'package:opennutritracker/fork/backup/after_restore.dart';
 // [/fork]
+// [fork] S511 import-replace-destructive: Replace loses data, so it is drawn
+// as the other destructive confirms
+import 'package:opennutritracker/fork/recipe/recipe_delete.dart'
+    show destructiveFilledStyle;
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 
 /// Export / Import App Data dialog. A SegmentedButton at the top picks
@@ -86,7 +91,8 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
             onPressed: () => Navigator.of(context).pop(false),
             child: Text(S.of(context).dialogCancelLabel),
           ),
-          TextButton(
+          FilledButton(
+            style: destructiveFilledStyle(context),
             onPressed: () => Navigator.of(context).pop(true),
             child: const Text('Replace'),
           ),

@@ -94,6 +94,13 @@ class _MemoryStore extends AdaptiveStore {
   Future<void> writeKey(String key, Object? value) async => keys[key] = value;
 }
 
+/// A store whose check-in write fails, as a full disk would.
+class _FailingStore extends _MemoryStore {
+  @override
+  Future<void> addCheckIn(CheckInRecord record) async =>
+      throw StateError('disk full');
+}
+
 /// Home's goal: the formula's 2738 before the first check-in, with 250 of
 /// logged activity added, as the critique's.
 class _Goal extends Fake implements GetKcalGoalUsecase {
@@ -234,6 +241,38 @@ void main() {
       await tester.tap(find.text('Undo'));
       await tester.pumpAndSettle();
       expect(store.records.single.acceptedKcal, 2600);
+    });
+
+    testWidgets('a failed save says so and Accept works again', (
+      tester,
+    ) async {
+      await _open(tester, _service(_FailingStore()));
+      await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+      await tester.pumpAndSettle();
+      expect(find.text('Not saved. Try again.'), findsOneWidget);
+      expect(find.byType(CheckInScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const ValueKey('check-in-accept')))
+            .onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets('a typed target over 10000 kcal is refused under the field', (
+      tester,
+    ) async {
+      final store = _MemoryStore();
+      await _open(tester, _service(store));
+      await tester.enterText(
+        find.byKey(const ValueKey('check-in-target')),
+        '25000',
+      );
+      await tester.tap(find.byKey(const ValueKey('check-in-accept')));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter a daily target up to 10000 kcal.'), findsOneWidget);
+      expect(store.records, isEmpty);
+      expect(find.byType(CheckInScreen), findsOneWidget);
     });
   });
 
