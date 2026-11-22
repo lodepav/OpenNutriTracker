@@ -123,9 +123,11 @@ class _CheckInHistoryScreenState extends State<CheckInHistoryScreen> {
     try {
       // Read again: the list on screen may be older than the store.
       final all = await widget.store.history();
-      await (widget.service ?? AdaptiveService.fromLocator()).restoreCheckIns(
-        all.isEmpty ? all : all.sublist(0, all.length - 1),
-      );
+      // Only the check-in the dialog named, and only while it is the latest.
+      if (all.isNotEmpty && all.last.date == latest.date) {
+        await (widget.service ?? AdaptiveService.fromLocator())
+            .restoreCheckIns(all.sublist(0, all.length - 1));
+      }
       AutoCheckIn.accepted.value = null;
       await refreshGoals();
       if (!mounted) return;

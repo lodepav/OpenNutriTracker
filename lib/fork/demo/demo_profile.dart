@@ -10,8 +10,8 @@ import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 /// for the whole app, so onboarding a second profile turned the demo
 /// profile's banner off. The mark lives in the profile's own fork box, and
 /// each switch copies it into `isDemoData` for the profile switched to
-/// ([syncDemoFlag], [adoptDemoMark]). In the backup with the profile
-/// (`BackupExtras`), so a restored demo keeps its banner.
+/// ([syncDemoFlag], [adoptDemoMark]). A restore ends it
+/// ([syncRestoredDemoMark]).
 const demoProfileKey = 'isDemoProfile';
 const _key = demoProfileKey;
 
@@ -63,11 +63,11 @@ Future<void> syncDemoFlag() async {
   await locator<AddConfigUsecase>().setConfigIsDemoData(mark == true);
 }
 
-/// Run after a restore: a mark it brought back shows or hides the banner
-/// now, not at the next switch. Without one, as after an older backup, the
-/// flag stays as it was.
+/// Run after a restore: it wrote real data into the active profile, and
+/// leaving a demo wipes the profile, so the profile is no longer a demo,
+/// whatever the backup was.
 Future<void> syncRestoredDemoMark() async {
   if (!_wired) return;
-  if ((await AdaptiveStore.openActiveBox()).get(_key) == null) return;
+  await (await AdaptiveStore.openActiveBox()).put(_key, false);
   await syncDemoFlag();
 }

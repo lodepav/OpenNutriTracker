@@ -10,8 +10,8 @@ final _log = Logger('afterRestore');
 
 /// What a finished restore does, from Settings' import (seam S38) and from
 /// onboarding: shows the restored settings, notes on this phone that the
-/// backup is off when it is, shows the demo banner when the restored
-/// profile holds the demo, and asks for the notification permission when
+/// backup is off when it is, ends the demo on the restored profile, so
+/// leaving it can't wipe what came back, and asks for the notification permission when
 /// a restored reminder would otherwise stay silent. Once per restore.
 Future<void> afterRestore(
   BuildContext context, {

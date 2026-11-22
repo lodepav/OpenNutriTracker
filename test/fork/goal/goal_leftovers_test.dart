@@ -109,6 +109,26 @@ void main() {
     expect(edited.lastDay, DateTime(2026, 11, 22));
   });
 
+  test('G4-25: a faster pace that only it reaches this week does not end '
+      'the goal at the old pace', () {
+    final start = DateTime(2026, 11, 16);
+    final plan = GoalDraft(
+      kind: PhaseKind.cut,
+      startKg: 82.4,
+      targetKg: 82,
+      start: start,
+      paceKg: 0.25,
+    ).toPlan();
+    final edited = editedPlan(
+      plan,
+      GoalDraft.of(plan, 82.4).copyWith(paceKg: 0.5),
+      today: start,
+      nowKg: 82.4,
+    );
+    // At 0.25 kg a week this week ends near 82.15, short of 82.
+    expect(edited.lastDay.isAfter(DateTime(2026, 11, 22)), isTrue);
+  });
+
   testWidgets('G4-7: the day sheet names the day tapped', (tester) async {
     final cut = GoalDraft(
       kind: PhaseKind.cut,

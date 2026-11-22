@@ -494,7 +494,14 @@ PhasePlan editedPlan(
   if (target != null && (fromKg - target) * (nowKg - target) <= 0) {
     // Reached by this week's end at its pace: the goal ends with this week,
     // not a whole week's block after it.
-    if (losing && plan.phases[index].kind == draft.kind) {
+    // The week keeps its own pace, so that pace must reach the target too.
+    final weekKg = kept.isEmpty
+        ? fromKg
+        : nowKg + rate.sign * kept.last.kgPerWeek.abs() * daysLeft / 7;
+    if (losing &&
+        kept.isNotEmpty &&
+        plan.phases[index].kind == draft.kind &&
+        (weekKg - target) * (nowKg - target) <= 0) {
       final week = kept.removeLast();
       return PhasePlan(
         start: plan.start,
