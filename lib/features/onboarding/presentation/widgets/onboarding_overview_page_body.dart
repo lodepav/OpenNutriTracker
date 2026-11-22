@@ -6,6 +6,9 @@ import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/energy_display.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/features/settings/presentation/widgets/kcal_goal_info_screen.dart';
+// [fork] S530 overview-goal-accent
+import 'package:opennutritracker/fork/display/contrast.dart';
+// [/fork]
 import 'package:opennutritracker/generated/l10n.dart';
 import 'package:provider/provider.dart';
 
@@ -78,7 +81,11 @@ class OnboardingOverviewPageBody extends StatelessWidget {
                 Text(
                   displayGoalString,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
+                        // [fork] S530 overview-goal-accent: a light picked
+                        // accent read 1.27:1 as text on the canvas
+                        color: textAccent(context),
+                        // color: Theme.of(context).colorScheme.primary,
+                        // [/fork]
                       ),
                 ),
                 Text(

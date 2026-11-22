@@ -44,6 +44,9 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
   late bool _acceptedPolicy = widget.initialAcceptedPolicy;
   late bool _acceptedDataCollection = widget.initialAcceptedDataCollection;
   bool _seedingDemo = false;
+  // [fork] S532 intro-one-busy: a restore in flight turns Try demo off
+  bool _forkRestoring = false;
+  // [/fork]
 
   // [fork] S470 intro-init: made once, not on every checkbox tap's rebuild
   late final Future<String> _forkVersion = AppConst.getVersionNumber();
@@ -180,9 +183,14 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                       // Stays tappable without the policy so the tap can
                       // explain itself; only the in-flight seed truly
                       // disables it.
-                      onPressed: _seedingDemo
+                      // [fork] S532 intro-one-busy
+                      onPressed: _seedingDemo || _forkRestoring
                           ? null
                           : (_acceptedPolicy ? _tryDemo : _policyRequired),
+                      // onPressed: _seedingDemo
+                      //     ? null
+                      //     : (_acceptedPolicy ? _tryDemo : _policyRequired),
+                      // [/fork]
                       // [fork] S451 intro-buttons-contrast: live, so drawn
                       // live; the tap's snackbar names the policy
                       // style: _acceptedPolicy
@@ -224,6 +232,12 @@ class _OnboardingIntroPageBodyState extends State<OnboardingIntroPageBody> {
                 RestoreBackupButton(
                   acceptedPolicy: _acceptedPolicy,
                   acceptedDataCollection: _acceptedDataCollection,
+                  // [fork] S532 intro-one-busy: one runs at a time
+                  busy: _seedingDemo,
+                  onBusy: (busy) {
+                    if (mounted) setState(() => _forkRestoring = busy);
+                  },
+                  // [/fork]
                 ),
                 // [/fork]
                 const SizedBox(height: 8.0),
