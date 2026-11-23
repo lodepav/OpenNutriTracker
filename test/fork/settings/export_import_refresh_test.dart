@@ -242,7 +242,7 @@ void main() {
   testWidgets('the description says what each format holds and points at '
       'the diary CSV', (tester) async {
     await pumpDialog(tester);
-    expect(find.textContaining('a CSV backup leaves out recipes'), findsOneWidget);
+    expect(find.textContaining('A CSV backup leaves out recipes'), findsOneWidget);
     expect(find.textContaining('Export diary as CSV'), findsOneWidget);
     expect(find.textContaining('backup your data'), findsNothing);
   });

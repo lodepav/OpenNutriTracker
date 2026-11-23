@@ -102,8 +102,8 @@ class CustomMealsTab extends StatelessWidget {
                     ),
                     const SizedBox(height: Dimens.spacing8),
                     Text(
-                      'A custom food is your own food with its nutrition, '
-                      'logged like any other. Add one with New custom food.',
+                      'Your own foods with their nutrition. Add one with New '
+                      'custom food.',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: palette.textMuted),
                     ),

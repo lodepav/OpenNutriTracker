@@ -375,10 +375,8 @@ class _GoalProgressPageState extends State<GoalProgressPage> {
         body:
             'The plan runs from where your trend weight was when you set '
             'the target, at the pace in your goal planner, until it reaches '
-            'the target. When you change the pace, the weeks so far stay '
-            'as they were and the change applies from the end of the '
-            'current week, where the plan starts again. The dates ahead '
-            'assume your trend keeps the pace they name.',
+            'the target. A pace change applies from the end of the current '
+            'week. The dates ahead assume your trend keeps its pace.',
       ),
     ];
   }

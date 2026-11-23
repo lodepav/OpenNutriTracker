@@ -296,10 +296,6 @@ void main() {
         100,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(
-        find.textContaining('Formula counts every kg as 7700 kcal'),
-        findsOneWidget,
-      );
       // Counted flat, the two agree: nothing to explain.
       AdaptiveStore.settings.value = const AdaptiveSettings(
         adaptiveTarget: true,
@@ -308,25 +304,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.textContaining('On Adaptive a kg counts as about'),
-        findsNothing,
-      );
-    });
-
-    testWidgets('on Formula the expenditure step says it counts 7700 a kg', (
-      tester,
-    ) async {
-      await _pump(tester, planner());
-      await toStep(tester, 'burn');
-      expect(
-        find.byKey(const ValueKey('goal-burn-formula-per-kg')),
-        findsOneWidget,
-      );
-      AdaptiveStore.settings.value = const AdaptiveSettings(
-        adaptiveTarget: true,
-      );
-      await tester.pumpAndSettle();
-      expect(
-        find.byKey(const ValueKey('goal-burn-formula-per-kg')),
         findsNothing,
       );
     });
@@ -387,7 +364,7 @@ void main() {
     await tester.tap(link);
     await tester.pumpAndSettle();
     expect(
-      find.textContaining('the change applies from the end of the current'),
+      find.textContaining('A pace change applies from the end of the current'),
       findsOneWidget,
     );
     expect(find.textContaining('starts again from that day'), findsNothing);

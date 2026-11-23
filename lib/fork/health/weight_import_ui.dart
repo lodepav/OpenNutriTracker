@@ -50,8 +50,8 @@ class WeightImportTile extends StatelessWidget {
                 'reading goes into your weight log, and a weight you entered '
                 'yourself is never replaced. The newest becomes the weight '
                 'your BMI and calorie goal use.\n\n'
-                'This import writes nothing to $healthPlatformName and sends '
-                'none of it anywhere: it stays on this device.\n\n'
+                'Nothing is written to $healthPlatformName or sent '
+                'anywhere.\n\n'
                 'Untick Weight in to stop. Weights already imported stay in '
                 'the log.',
             offMessage: 'Weight import off; imported weights stay in the log',
@@ -98,8 +98,8 @@ class BodyFatImportTile extends StatelessWidget {
                 'goes into your body measurements, where it feeds your '
                 'energy estimate and lean mass; a value you entered yourself '
                 'is never replaced.\n\n'
-                'This import writes nothing to $healthPlatformName and sends '
-                'none of it anywhere: it stays on this device.\n\n'
+                'Nothing is written to $healthPlatformName or sent '
+                'anywhere.\n\n'
                 'Untick Body fat in to stop. Readings already imported stay.',
             offMessage: 'Body fat import off; imported values stay',
             done: (days) => days == 0

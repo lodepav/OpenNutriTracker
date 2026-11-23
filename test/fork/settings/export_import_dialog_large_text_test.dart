@@ -1,5 +1,5 @@
 // At twice the font size the Export / import dialog scrolls, so its
-// overwrite warning stays above the buttons, and Cancel leaves it (the
+// description starts above the buttons, and Cancel leaves it (the
 // 2026-11-21 G6 critique, ex_d2.png).
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -29,9 +29,10 @@ class _DiaryBloc extends Fake implements DiaryBloc {}
 
 class _CalendarDayBloc extends Fake implements CalendarDayBloc {}
 
-const _warning =
-    'Import adds the file\'s entries to this profile, overwriting any it '
-    'shares, and the goals it holds replace yours.';
+const _description =
+    'Export saves a backup to import here or on another phone. A CSV backup '
+    'leaves out recipes; for a spreadsheet, use Export diary as CSV.\n\n'
+    'Nothing is kept in a cloud.';
 
 void main() {
   setUp(() {
@@ -80,18 +81,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('at 200% the warning scrolls into view above the buttons', (
+  testWidgets('at 200% the description scrolls into view above the buttons', (
     tester,
   ) async {
     await open(tester);
 
-    await tester.ensureVisible(find.text(_warning));
+    await tester.ensureVisible(find.text(_description));
     await tester.pumpAndSettle();
     final dialog = tester.getRect(find.byType(AlertDialog));
-    final warning = tester.getRect(find.text(_warning));
+    final description = tester.getRect(find.text(_description));
     final buttons = tester.getRect(find.text(l10nEn.exportAction));
-    expect(warning.bottom, lessThanOrEqualTo(buttons.top));
-    expect(warning.bottom, lessThanOrEqualTo(dialog.bottom));
+    expect(description.top, lessThan(buttons.top));
+    expect(description.top, greaterThanOrEqualTo(dialog.top));
     expect(tester.takeException(), isNull);
   });
 

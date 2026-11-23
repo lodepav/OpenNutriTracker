@@ -131,9 +131,10 @@ Matcher _failsWith(ExportImportFailureReason reason) => throwsA(
   isA<ExportImportFailure>().having((f) => f.reason, 'reason', reason),
 );
 
-const _warning =
-    'Import adds the file\'s entries to this profile, overwriting any it '
-    'shares, and the goals it holds replace yours.';
+const _description =
+    'Export saves a backup to import here or on another phone. A CSV backup '
+    'leaves out recipes; for a spreadsheet, use Export diary as CSV.\n\n'
+    'Nothing is kept in a cloud.';
 
 void main() {
   group('the import usecase', () {
@@ -237,7 +238,7 @@ void main() {
 
     for (final csv in [false, true]) {
       testWidgets(
-        'at 200% the warning is on screen unscrolled, before the rest '
+        'at 200% the description starts above the buttons '
         '(${csv ? 'CSV' : 'JSON'})',
         (tester) async {
           await open(tester, scale: 2);
@@ -246,13 +247,9 @@ void main() {
             await tester.pumpAndSettle();
           }
 
-          final warning = tester.getRect(find.text(_warning));
+          final description = tester.getRect(find.text(_description));
           final buttons = tester.getRect(find.text(l10nEn.exportAction));
-          final description = tester.getRect(
-            find.textContaining('Export saves a backup file'),
-          );
-          expect(warning.bottom, lessThanOrEqualTo(buttons.top));
-          expect(warning.bottom, lessThanOrEqualTo(description.top));
+          expect(description.top, lessThan(buttons.top));
           expect(tester.takeException(), isNull);
         },
       );

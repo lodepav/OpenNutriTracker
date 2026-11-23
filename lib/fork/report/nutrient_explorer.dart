@@ -482,8 +482,7 @@ class _NutrientExplorerScreenState extends State<NutrientExplorerScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Text(
-                'A day\'s average over the days logged, against their goals. '
-                '$goalStandingKey',
+                'Daily average on logged days. $goalStandingKey',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),

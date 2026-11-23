@@ -283,8 +283,8 @@ class _SideComparePageState extends State<SideComparePage> {
           // One line by its button, not a second "none yet" down the page.
           Text(
             '${sides.isEmpty ? 'No ${part.label.toLowerCase()} measured yet. ' : ''}'
-            'Measure your left and right ${part.label.toLowerCase()} on the '
-            'same day to compare them.',
+            'Measure both ${part.label.toLowerCase()} on the same day to '
+            'compare them.',
           ),
           Align(
             alignment: AlignmentDirectional.centerStart,

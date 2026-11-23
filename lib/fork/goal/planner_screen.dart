@@ -517,10 +517,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
         child: Text(
           'On Adaptive a ${_perLb ? 'lb' : 'kg'} counts as about '
-          '${energyText(context, kcalPerWeightUnit(_kcalPerKg, _unit))}, as '
-          'part of a change is lean tissue, which holds less; Formula counts '
-          'every '
-          '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)}.',
+          '${energyText(context, kcalPerWeightUnit(_kcalPerKg, _unit))}, since '
+          'part of a change is lean tissue.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ),
@@ -1422,16 +1420,6 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             'it only on Adaptive.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-        // The switch below also sets the estimate, so it stays as set.
-        if (_formula && !_setup.onboarding)
-          Text(
-            key: const ValueKey('goal-burn-formula-per-kg'),
-            'Formula counts every '
-            '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)} '
-            'whatever the switch below says; the switch sets it for this '
-            'estimate and Adaptive.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
       ],
     ),
     // At first run the estimate's settings keep their defaults unless opened.
@@ -1537,8 +1525,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             if (_formula)
               Text(
                 'After a few weeks of weigh-ins and logging, Adaptive follows '
-                'what you actually burn: switch in Settings, or here when you '
-                'edit the plan.',
+                'what you actually burn.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             TargetModeFields(
@@ -1577,9 +1564,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
       _question(
         context,
         'Protein, fat and carbs',
-        'The grams of each to aim for a day, from your calorie target. They '
-            'go by percentages, or set protein and fat by your weight with '
-            'the switch below.',
+        'The grams of each to aim for a day, from your calorie target.',
       ),
       if (settings.fixedTarget && settings.fixedMacros != null)
         _Panel(
@@ -1739,9 +1724,8 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         key: const ValueKey('goal-plan-adaptive-starts'),
-                        'Adaptive starts at your first check-in. Until you '
-                        'accept it, your goal stays on the formula, with '
-                        'logged activities added.',
+                        'Adaptive starts at your first check-in; until then '
+                        'the formula sets your goal.',
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
@@ -1764,9 +1748,7 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
                     key: const ValueKey('goal-plan-target-now'),
                     'Your target now is ${energyText(context, kept)}'
                     '${settings.activityMode == ActivityMode.daily ? ' before activity' : ''}, '
-                    'from your last check-in. The figures above are what '
-                    'the pace works out to; each check-in proposes one '
-                    'again.',
+                    'from your last check-in.',
                     style: theme.textTheme.bodySmall,
                   ),
                 );

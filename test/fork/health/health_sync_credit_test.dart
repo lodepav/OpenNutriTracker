@@ -73,9 +73,7 @@ void main() {
 
   tearDown(() => GetIt.instance.reset());
 
-  const hint =
-      'When you turn on Workouts in, OpenBite sets the credit from your '
-      'height and weight.';
+  const hint = 'Turning on Workouts in sets this from your height and weight.';
 
   testWidgets('before opt-in the credit says what turning it on does', (
     tester,

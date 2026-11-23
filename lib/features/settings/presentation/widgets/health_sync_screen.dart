@@ -511,11 +511,10 @@ class _HealthSyncScreenState extends State<HealthSyncScreen> {
               padding: const EdgeInsets.only(top: Dimens.spacing4),
               child: Text(
                 healthStoreReadsBodyFat
-                    ? 'When you turn on Workouts in, OpenBite sets the credit '
-                          'from your body fat in $healthPlatformName, or from '
-                          'your height and weight without one.'
-                    : 'When you turn on Workouts in, OpenBite sets the credit '
-                          'from your height and weight.',
+                    ? 'Turning on Workouts in sets this from your body fat, '
+                          'or your height and weight.'
+                    : 'Turning on Workouts in sets this from your height and '
+                          'weight.',
                 style: textTheme.bodySmall,
               ),
             ),

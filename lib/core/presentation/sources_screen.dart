@@ -214,8 +214,7 @@ class SourcesScreen extends StatelessWidget {
           //   style: Theme.of(context).textTheme.bodyMedium,
           // ),
           Text(
-            'The calculations below follow the sources cited under each '
-            'one, so you can check a number yourself.',
+            'Each calculation with the sources it follows.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Dimens.spacing16),
