@@ -21,7 +21,7 @@ void main() {
     expect(find.text(l10nEn.sourcesScreenIntro), findsNothing);
     expect(find.textContaining('every calculation'), findsNothing);
     expect(
-      find.textContaining('Each calculation with the sources'),
+      find.textContaining('Each calculation below names the sources'),
       findsOneWidget,
     );
   });

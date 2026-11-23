@@ -1420,6 +1420,15 @@ class _GoalPlannerScreenState extends State<GoalPlannerScreen> {
             'it only on Adaptive.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+        // The switch below also sets the estimate, so it stays as set.
+        if (_formula && !_setup.onboarding)
+          Text(
+            key: const ValueKey('goal-burn-formula-per-kg'),
+            'Formula always counts '
+            '${energyPerWeightText(context, AdaptiveSettings.commonKcalPerKg, _unit)}; '
+            'the switch below sets it for this estimate and Adaptive.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     ),
     // At first run the estimate's settings keep their defaults unless opened.

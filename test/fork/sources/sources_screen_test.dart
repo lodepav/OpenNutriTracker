@@ -60,7 +60,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .getRect(find.textContaining('Each calculation with the sources'))
+          .getRect(find.textContaining('Each calculation below names the sources'))
           .top,
       lessThan(kToolbarHeight + 40),
     );

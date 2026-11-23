@@ -308,6 +308,25 @@ void main() {
       );
     });
 
+    testWidgets('on Formula the expenditure step says it counts 7700 a kg', (
+      tester,
+    ) async {
+      await _pump(tester, planner());
+      await toStep(tester, 'burn');
+      expect(
+        find.byKey(const ValueKey('goal-burn-formula-per-kg')),
+        findsOneWidget,
+      );
+      AdaptiveStore.settings.value = const AdaptiveSettings(
+        adaptiveTarget: true,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('goal-burn-formula-per-kg')),
+        findsNothing,
+      );
+    });
+
     testWidgets('the target step prints the pace as the pace step does', (
       tester,
     ) async {

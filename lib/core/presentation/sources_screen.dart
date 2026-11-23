@@ -214,7 +214,7 @@ class SourcesScreen extends StatelessWidget {
           //   style: Theme.of(context).textTheme.bodyMedium,
           // ),
           Text(
-            'Each calculation with the sources it follows.',
+            'Each calculation below names the sources it follows.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: Dimens.spacing16),
