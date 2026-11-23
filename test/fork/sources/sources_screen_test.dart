@@ -59,7 +59,9 @@ void main() {
     await pumpOnPhone(tester, const SourcesScreen(), textScale: 1);
     await tester.pumpAndSettle();
     expect(
-      tester.getRect(find.textContaining('The calculations below')).top,
+      tester
+          .getRect(find.textContaining('Each calculation below names the sources'))
+          .top,
       lessThan(kToolbarHeight + 40),
     );
   });

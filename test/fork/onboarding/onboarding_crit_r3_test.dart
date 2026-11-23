@@ -204,15 +204,11 @@ void main() {
       expect(find.text('Fixed'), findsOneWidget);
     });
 
-    testWidgets('outside onboarding the Formula line counts a lb too', (
+    testWidgets('outside onboarding the burn step shows Days left out', (
       tester,
     ) async {
       await _pump(tester, planner(onboarding: false));
       await toStep(tester, 'burn');
-      expect(
-        find.textContaining('Formula counts every lb as 3500 kcal'),
-        findsOneWidget,
-      );
       expect(find.text('Days left out'), findsOneWidget);
     });
 

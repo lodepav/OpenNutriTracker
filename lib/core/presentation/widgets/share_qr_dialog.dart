@@ -85,18 +85,15 @@ class _ShareQrDialogState extends State<ShareQrDialog> {
   // Says what the image is for: a screen reader user can't tell it from
   // "qr code".
   String get _qrLabel {
-    final (name, where) = switch (classifySharedPayload(widget.code)) {
-      SharedPayloadKind.meal => ('this meal', 'Import shared meal'),
-      SharedPayloadKind.activity => ('this workout', 'Import workout'),
-      SharedPayloadKind.recipe => (
-        SharedRecipePayload.fromJsonString(widget.code).name,
-        'Import recipe',
-      ),
-      null => (widget.title, null),
+    final name = switch (classifySharedPayload(widget.code)) {
+      SharedPayloadKind.meal => 'this meal',
+      SharedPayloadKind.activity => 'this workout',
+      SharedPayloadKind.recipe => SharedRecipePayload.fromJsonString(
+        widget.code,
+      ).name,
+      null => widget.title,
     };
-    return where == null
-        ? 'QR code for $name'
-        : "QR code for $name, scan it in OpenBite's $where";
+    return 'QR code for $name';
   }
   // [/fork]
 

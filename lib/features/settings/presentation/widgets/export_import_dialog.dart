@@ -185,18 +185,11 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                 bloc: _exportImportBloc,
                 builder: (context, state) {
                   if (state is ExportImportInitial) {
-                    // [fork] S142 import-says: what Import does to what is
-                    // here, before the file is picked (H3); first, so it is
-                    // on screen at 200% without scrolling
+                    // [fork] S142 import-says: what a backup holds; what an
+                    // import replaces is asked once the file is picked
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Import adds the file\'s entries to this profile, '
-                          'overwriting any it shares, and the goals it holds '
-                          'replace yours.',
-                        ),
-                        const SizedBox(height: 8),
                         // What the two formats hold, and how this backup
                         // differs from the diary's CSV export (G6-7)
                         // Text(
@@ -205,11 +198,10 @@ class _ExportImportDialogState extends State<ExportImportDialog> {
                         //   maxLines: 15,
                         // ),
                         const Text(
-                          'Export saves a backup file you can import later, '
-                          'here or on another phone. JSON holds everything; '
-                          'a CSV backup leaves out recipes. For a '
-                          'spreadsheet of what you ate, use Export diary as '
-                          'CSV instead.\n\nNothing is kept in a cloud.',
+                          'Export saves a backup to import here or on another '
+                          'phone. A CSV backup leaves out recipes; for a '
+                          'spreadsheet, use Export diary as CSV.\n\nNothing '
+                          'is kept in a cloud.',
                         ),
                       ],
                     );

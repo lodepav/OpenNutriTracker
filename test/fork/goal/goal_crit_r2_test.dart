@@ -296,10 +296,6 @@ void main() {
         100,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(
-        find.textContaining('Formula counts every kg as 7700 kcal'),
-        findsOneWidget,
-      );
       // Counted flat, the two agree: nothing to explain.
       AdaptiveStore.settings.value = const AdaptiveSettings(
         adaptiveTarget: true,
@@ -387,7 +383,7 @@ void main() {
     await tester.tap(link);
     await tester.pumpAndSettle();
     expect(
-      find.textContaining('the change applies from the end of the current'),
+      find.textContaining('A pace change applies from the end of the current'),
       findsOneWidget,
     );
     expect(find.textContaining('starts again from that day'), findsNothing);

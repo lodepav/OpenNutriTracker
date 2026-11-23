@@ -50,9 +50,7 @@ class PartialDaysCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${days.length == 1 ? 'This day is' : 'These days are'} far '
-              'under what you usually log. A day logged in part counts as a '
-              'day of eating little, which lowers your expenditure and your '
-              'target. Leave it out, or count it as a full day if that is all you ate'
+              'under what you usually log, which would lower your target'
               '${heldBack ? '; the check-in waits for your answer' : ''}.',
               style: theme.textTheme.bodySmall,
             ),

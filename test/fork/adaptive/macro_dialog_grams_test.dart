@@ -49,7 +49,7 @@ void main() {
     // G4-12: "a weekday's shift" was jargon; the switch says what it does.
     expect(find.textContaining("weekday's shift"), findsNothing);
     expect(
-      find.textContaining('Sets protein and fat in grams for your body'),
+      find.textContaining('In grams for your body weight'),
       findsOneWidget,
     );
     // 80 kg at 1.6 and 0.8 g/kg: 128 g protein, 64 g fat, carbs the rest.

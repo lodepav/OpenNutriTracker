@@ -188,15 +188,12 @@ void main() {
     await tester.pumpWidget(_app(section: SettingsSection.data));
     await tester.pumpAndSettle();
     expect(
-      find.text(
-        'Profile, logged foods, activities, weight history, progress '
-        'photos, fasting sessions and the shared AI key',
-      ),
+      find.text("This profile's data and the shared AI key"),
       findsOneWidget,
     );
   });
 
-  testWidgets('the dialog leads with what goes, ends with no undo, and '
+  testWidgets('the dialog leads with what goes for good, and '
       'offers an export first', (tester) async {
     locator.registerSingleton<ExportImportBloc>(_IdleExportImportBloc());
     await tester.binding.setSurfaceSize(const Size(400, 3000));
@@ -218,13 +215,12 @@ void main() {
     final deletes = lines.indexWhere((l) => l.startsWith('Deletes '));
     expect(deletes, isNonNegative, reason: '$lines');
     expect(lines[deletes], contains('logged foods'));
-    // Final from the first line, which is on screen at 200% (G6-16)
     expect(lines[deletes], startsWith('Deletes this profile for good'));
-    expect(lines[deletes], contains('progress photos'));
+    expect(lines[deletes], contains('photos'));
     expect(lines[deletes], contains('every profile shares'));
     expect(lines[deletes], isNot(contains(' meals, activities')));
     expect(lines[deletes + 1], startsWith('Other profiles'));
-    expect(lines[deletes + 2], 'This cannot be undone.');
+    expect(lines, isNot(contains('This cannot be undone.')));
 
     // Export first closes this dialog and opens Export / import.
     await tester.tap(find.text('Export first'));

@@ -116,8 +116,8 @@ void main() {
     // G5-17: one empty line by its button, none further down.
     expect(
       find.text(
-        'No thighs measured yet. Measure your left and right thighs on the '
-        'same day to compare them.',
+        'No thighs measured yet. Measure both thighs on the same day to '
+        'compare them.',
       ),
       findsOne,
     );

@@ -110,16 +110,15 @@ class _ScannerErrorState extends State<ScannerError>
                 style: text.titleMedium?.copyWith(color: colors.onSurface),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: Dimens.spacing8),
-              Text(
-                refused
-                    ? 'Allow the camera to scan a code. If no prompt appears, '
-                          "Allow camera opens the app's settings: turn on "
-                          'Camera there and come back.'
-                    : 'You can paste the code instead.',
-                style: text.bodyMedium?.copyWith(color: colors.onSurface),
-                textAlign: TextAlign.center,
-              ),
+              if (refused) ...[
+                const SizedBox(height: Dimens.spacing8),
+                Text(
+                  'Allow the camera to scan a code. If no prompt appears, '
+                  "turn on Camera in the app's settings.",
+                  style: text.bodyMedium?.copyWith(color: colors.onSurface),
+                  textAlign: TextAlign.center,
+                ),
+              ],
               const SizedBox(height: Dimens.spacing24),
               if (refused) ...[
                 FilledButton.icon(

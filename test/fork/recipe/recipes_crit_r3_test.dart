@@ -251,8 +251,8 @@ void main() {
       expect(find.text('No custom foods yet.'), findsOneWidget);
       expect(
         find.text(
-          'A custom food is your own food with its nutrition, logged like '
-          'any other. Add one with New custom food.',
+          'Your own foods with their nutrition. Add one with New custom '
+          'food.',
         ),
         findsOneWidget,
       );

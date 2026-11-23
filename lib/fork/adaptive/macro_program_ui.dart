@@ -162,11 +162,8 @@ class _MacroProgramFormState extends State<MacroProgramForm> {
           contentPadding: EdgeInsets.zero,
           title: Text('Protein and fat per $per'),
           subtitle: const Text(
-            'Sets protein and fat in grams for your body weight, in place '
-            'of the percentages. Protein stays the same. Fat is set for '
-            'maintenance and moves with a cut or a bulk. Carbs fill the '
-            'rest of your calories, so they change most on a day with a '
-            'higher or lower goal.',
+            'In grams for your body weight, in place of the percentages. '
+            'Carbs fill the rest.',
           ),
           value: _on,
           onChanged: (v) => setState(() => _on = v),
