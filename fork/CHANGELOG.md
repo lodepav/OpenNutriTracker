@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 1.1.1 · 2026-11-23
+
+Based on OpenNutriTracker 2.7.0.
+
+### Fixes and changes
+
+- cut copy the critique and audit rounds overexplained
+
 ## 1.1.0 · 2026-11-22
 
 Based on OpenNutriTracker 2.7.0.
