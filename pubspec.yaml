@@ -109,6 +109,11 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  # [fork] S607 journey-driver: flutter_driver for the journey check's entry point,
+  # lib/fork/dev/main_journey.dart (fork/ux/JOURNEYS.md)
+  flutter_driver:
+    sdk: flutter
+  # [/fork]
 
   build_runner: ^2.15.1
   json_serializable: ^6.14.1
