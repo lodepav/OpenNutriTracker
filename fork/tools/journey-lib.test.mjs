@@ -145,3 +145,9 @@ test('diffFacts names an added and a dropped value', () => {
 test('hollow finds null, false and empty, not zero', () => {
   assert.deepEqual(hollow({ a: 0, b: '', c: null, d: [], e: {}, f: false, g: [1] }), ['c', 'd', 'e', 'f'])
 })
+
+test('a photo lunch saved twice (a submit tapped twice) fails', () => {
+  const twice = at('lunch', 'Chicken rice bowl', 430, per(114, 12, 10, 2))
+  const r = checkJ2({ before: day([]), after: day([twice, twice], { weight: { kg: 79, source: 'health' }, adaptive }), ui: { checkInOpened: true } })
+  assert.ok(r.problems.some(p => p.includes('saved 2 entries, not 1')))
+})

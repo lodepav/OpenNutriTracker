@@ -148,7 +148,12 @@ snapshot() {   # $1: the archive to write
 "$ADB" shell am force-stop "$APP"
 snapshot "${SNAP:?}/app.tar" || { echo "journey check: the snapshot of the app is not a readable archive (is the debug app installed?)" >&2; SNAP=""; exit 2; }
 
+# The core boxes' key sits in this AVD's Keystore: a profile opens only on the install it was made on.
+avd_name() { "$ADB" emu avd name 2>/dev/null | head -1 | tr -d '\r'; }
 load_profile() {   # $1: the archive
+  if [[ -s "$1.avd" && "$(cat "$1.avd")" != "$(avd_name)" ]]; then
+    echo "journey check: $1 was made on AVD $(cat "$1.avd"), this is $(avd_name): boot that one (ANDROID_SERIAL) or remake the profile" >&2; exit 2
+  fi
   "$ADB" shell am force-stop "$APP"
   untar_over "$1" || { echo "journey check: could not put $1 into $APP" >&2; exit 2; }
   # files the profile does not hold would run with it: the user's, or a box made since
@@ -165,7 +170,8 @@ keep_profile() {   # $1: where
   snapshot "${RUN:?}/profile.tar" || { echo "journey check: the profile is not a readable archive: not kept" >&2; exit 2; }
   mkdir -p "$CACHE"
   cp "${RUN:?}/profile.tar" "$1"
-  echo "journey check: profile kept at $1"
+  avd_name > "$1.avd"
+  echo "journey check: profile kept at $1 (AVD $(cat "$1.avd"))"
 }
 
 if [[ $MAKE == ux ]]; then
@@ -200,6 +206,8 @@ for j in "${JOURNEYS[@]}"; do
   accepted "$j" || [[ ! -s "$base" ]] || args+=(--base "$base")
   code=0
   node fork/tools/journey-check.mjs "${args[@]}" || code=$?
+  # where the app was when a step failed, before the restore takes it away
+  [[ $code -eq 0 ]] || { "$ADB" exec-out screencap -p > "${RUN:?}/$j.png" && echo "journey check: $j's last screen: ${RUN:?}/$j.png" >&2; } || true
   [[ $code -ne 2 ]] || { echo "journey check: $j could not run" >&2; status=2; continue; }
   if accepted "$j" || [[ ! -s "$base" ]]; then
     # A first run keeps its facts only when every check passed; --accept keeps them anyway.

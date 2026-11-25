@@ -118,11 +118,24 @@ async function must(name, step, tries = 12) {
   if (!ok) throw new Error(`${name}: ${lastError}`)
 }
 const seen = async t => { try { await driver({ command: 'waitFor', ...finder(t) }, 600); return true } catch { return false } }
-const tap = (t, name = 'tap ' + what(t)) => must(name, () => driver({ command: 'tap', ...finder(t) }, 1500))
+// frame sync is off, so a tap returns before the app redraws: a short settle after each
+const tap = async (t, name = 'tap ' + what(t)) => {
+  // wait for it, then one tap: a retry after a late answer would tap twice
+  if (!(await until(() => seen(t), 12, 500))) throw new Error(`${name}: ${what(t)} is not on the page`)
+  await driver({ command: 'tap', ...finder(t) }, 3000)
+  await sleep(400)
+}
 /** An id the app sets as a Semantics identifier on one screen and as a ValueKey on another. */
-const tapEither = name => must('tap ' + name, async () => {
-  try { await driver({ command: 'tap', ...finder({ id: name }) }, 700) } catch { await driver({ command: 'tap', ...finder({ key: name }) }, 700) }
-})
+// Finds which of the two the page has, then taps once: a tap that landed but answered late must
+// not be tapped again (a submit would save twice)
+const tapEither = async name => {
+  let t
+  if (!(await until(async () => (t = (await seen({ id: name })) ? { id: name } : (await seen({ key: name })) ? { key: name } : null), 12, 500))) {
+    throw new Error(`tap ${name}: neither id nor key ${name} is on the page`)
+  }
+  await driver({ command: 'tap', ...finder(t) }, 3000)
+  await sleep(400)
+}
 /** Types into the field `t`: a tap focuses it, enter_text replaces its whole value. */
 async function type(t, text) {
   await tap(t)
@@ -130,6 +143,9 @@ async function type(t, text) {
 }
 /** Scrolls the page's list (or with `sideways` the first row of chips) until `t` is on screen. */
 async function reveal(t, sideways = false) {
+  if (await seen(t)) return
+  // a widget built out of view (a chip past the row's edge) scrolls in by itself
+  await driver({ command: 'scrollIntoView', ...finder(t), any: '1', alignment: '0.5' }, 1500).catch(() => {})
   for (let n = 0; n < 12; n++) {
     if (await seen(t)) return
     const move = sideways ? { value: 'horizontal', dx: '-250', dy: '0' } : { value: '', dx: '0', dy: '-350' }
@@ -157,10 +173,15 @@ const state = () => request({ cmd: 'state', date: today() })
 
 /** Home → + → `meal` → search: the Add food screen with the bundled foods' tab chosen. */
 async function searchFoods(meal, query) {
-  await home()
-  await tapEither('fab-add-item')
-  await tapEither('add-item-' + meal)
-  await tapEither('add-item-search')
+  // the add sheet can still be animating from the last step and swallow a tap: open it again
+  for (let n = 0; ; n++) {
+    await home()
+    await tapEither('fab-add-item')
+    await tapEither('add-item-' + meal)
+    await tapEither('add-item-search')
+    if (await until(() => seen({ id: 'meal-search-field' }), 6)) break
+    if (n === 2) throw new Error(`the search for ${meal} did not open`)
+  }
   await type({ id: 'meal-search-field' }, query)
   // "All" would ask Open Food Facts too; the journeys use the bundled table only
   await reveal({ text: '^Food$' }, true)
@@ -172,7 +193,7 @@ async function addWeighed(food, grams) {
   await searchFoods(food.meal, food.query)
   const row = (await until(() => seen({ text: food.pattern }), 10)) ? { text: food.pattern } : { text: food.loose }
   await tap(row, `open ${food.pattern}`)
-  await tapEither('amount-unit-g').catch(() => {})
+  await tap({ text: '^Grams$' }, 'choose grams')
   await type({ key: 'amount-field' }, grams)
   await tapEither('meal-detail-add')
 }
@@ -204,6 +225,7 @@ async function J1(ui) {
   await tapEither('fork-selection-more')
   await tapEither('fork-selection-edit')
   ui.editOpened = true
+  await tap({ text: '^Grams$' }, 'edit in grams')
   await type({ key: 'amount-field' }, T.BREAKFAST.edited)
   await tap({ text: '^OK$' }, 'save the edit')
   await home()
@@ -239,18 +261,20 @@ async function J2(ui) {
   // 4. dinner searched: chicken, a side, a salad
   for (const d of T.DINNER) await addWeighed(d, d.grams)
   // 5. today's weigh-in, from the fake Health Connect import that runs at launch
+  await request({ cmd: 'weightImportNow' })
   await must('a weigh-in today', async () => { if (!(await state()).weight) throw new Error('none yet') }, 30)
   // 6. the check-in screen, from Settings
   await home()
   await tap({ id: 'nav-you' })
+  await reveal({ id: 'profile-settings' })
   await tapEither('profile-settings')
   await tapEither('settings-section-goals')
   await reveal({ text: '^Trend and calorie target' })
   await tap({ text: '^Trend and calorie target' })
   await reveal({ text: '^Expenditure and check-ins' })
   await tap({ text: '^Expenditure and check-ins' })
-  await reveal({ key: 'open-check-in' })
-  await tap({ key: 'open-check-in' })
+  await reveal({ text: '^Open check-in$' })
+  await tap({ text: '^Open check-in$' })
   ui.checkInOpened = await until(() => seen({ key: 'check-in-target' }), 16)
 }
 
@@ -305,6 +329,7 @@ async function main() {
     } else if (cmd === 'import') {
       await request({ cmd: 'importMacroFactor', path: args[0] })
       await tap({ id: 'nav-you' })
+      await reveal({ id: 'profile-settings' })
       await tapEither('profile-settings')
       await tapEither('settings-section-data')
       await reveal({ key: 'fork-history-import' })
@@ -313,6 +338,17 @@ async function main() {
       await tap({ key: 'history-import' })
       await must('the import finishes', () => driver({ command: 'waitFor', ...finder({ text: '^Imported' }) }, 2000), 60)
       console.log('journey-check: imported ' + args[0])
+      // the owner's target is the adaptive one, set where the owner would set it
+      await home()
+      await tap({ id: 'nav-you' })
+      await reveal({ id: 'profile-settings' })
+      await tapEither('profile-settings')
+      await tapEither('settings-section-goals')
+      await reveal({ text: '^Trend and calorie target' })
+      await tap({ text: '^Trend and calorie target' })
+      await reveal({ text: '^Adaptive$' })
+      await tap({ text: '^Adaptive$' })
+      console.log('journey-check: the calorie target is adaptive')
     } else fail('usage: run <J> <out> [--base <file>] | network | request <json> | import <path>')
   } catch (e) {
     console.error(`journey-check: ${cmd}: ${e.message}`)

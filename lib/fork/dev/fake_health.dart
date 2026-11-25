@@ -23,7 +23,11 @@ class FakeWeights implements WeightSource {
     final today = DateTime(to.year, to.month, to.day);
     return [
       for (var ago = 30; ago >= 0; ago--)
-        if (today.subtract(Duration(days: ago)).add(const Duration(hours: 7))
+        // before 7:00 today's weigh-in is now, so a run at night still has one
+        if (_atLatest(
+              today.subtract(Duration(days: ago)).add(const Duration(hours: 7)),
+              to,
+            )
             case final at when !at.isBefore(from) && !at.isAfter(to))
           HealthWeight(
             'fake-${at.toIso8601String()}',
@@ -36,6 +40,9 @@ class FakeWeights implements WeightSource {
 
 /// The same scale's body fat, every third morning, from 24% a month ago
 /// down 0.1 points a reading.
+DateTime _atLatest(DateTime at, DateTime to) =>
+    at.isAfter(to) && at.difference(to) < const Duration(days: 1) ? to : at;
+
 class FakeBodyFat implements BodyFatSource {
   @override
   Future<bool> requestPermission() async => true;

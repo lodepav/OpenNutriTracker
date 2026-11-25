@@ -15,7 +15,7 @@ export const J1_TYPED = {
 }
 /** What J2 types and picks, on the owner profile (the owner's habits, confirmed 2026-11-25). */
 export const J2_TYPED = {
-  SHAKE: { meal: 'snack', query: 'protein', loose: '[Pp]rotein|[Ss]hake|[Ww]hey' },
+  SHAKE: { meal: 'snack', query: 'whey', loose: '[Ww]hey|[Ss]hake' },
   LUNCH_NOTE: 'dirty fries with pork 430g',
   DINNER: [
     { meal: 'dinner', query: 'chicken breast grilled', pattern: '^Chicken breast, grilled', loose: '[Cc]hicken', grams: 200 },
@@ -125,7 +125,7 @@ export function checkJ2(run) {
   rule('breakfast repeated', of('breakfast').length >= 1, 'step 1: no breakfast entry was added from the recent foods')
   rule('shake logged', mine.some(e => matches(e, T.SHAKE.loose)), `step 2: no new entry matches /${T.SHAKE.loose}/`)
   const lunch = of('lunch')
-  rule('photo lunch logged', lunch.length >= 1 && lunch.every(e => Number(e.kcal) > 0), `step 3: the photo lunch saved ${lunch.length} entries${lunch.some(e => !(Number(e.kcal) > 0)) ? ', one with no energy' : ''}`)
+  rule('photo lunch logged', lunch.length === 1 && lunch.every(e => Number(e.kcal) > 0), `step 3: the photo lunch saved ${lunch.length} entries, not 1 (a submit tapped twice?)${lunch.some(e => !(Number(e.kcal) > 0)) ? ', one with no energy' : ''}`)
   for (const d of T.DINNER) {
     const e = of('dinner').find(x => matches(x, d.loose))
     rule(`dinner ${d.query} at ${d.grams} g`, e && e.amount === d.grams && WEIGHED.has(String(e.unit)), `step 4: dinner's /${d.loose}/ saved as ${e ? `${e.amount} ${e.unit}` : 'nothing'}, typed ${d.grams} g`)

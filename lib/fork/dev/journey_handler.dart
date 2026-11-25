@@ -76,7 +76,7 @@ class JourneyFinder extends FinderExtension {
     Map<String, String> params,
     DeserializeFinderFactory finderFactory,
   ) => JourneyFind({
-    for (final k in ['by', 'value', 'index']) k: ?params[k],
+    for (final k in ['by', 'value', 'index', 'any']) k: ?params[k],
   });
 
   @override
@@ -121,7 +121,9 @@ class JourneyFinder extends FinderExtension {
     };
     // only what is on screen: a route below or a list row out of sight is
     // not what the user sees, and tap needs one match
-    return _Nth(found.hitTestable(), int.tryParse(p['index'] ?? '') ?? 0);
+    // "any" also takes one built out of view, for scrollIntoView to bring in
+    final seen = p['any'] == '1' ? found : found.hitTestable();
+    return _Nth(seen, int.tryParse(p['index'] ?? '') ?? 0);
   }
 }
 
@@ -232,6 +234,7 @@ Future<String> journeyHandler(String? message) async {
       'network' => await _network(),
       'importMacroFactor' => _armPicker(cmd['path'] as String),
       'weightImportOn' => await _weightImportOn(),
+      'weightImportNow' => await _weightImportNow(),
       'seedDemo' => await _seedDemo(),
       final other => throw ArgumentError('unknown cmd $other'),
     };
@@ -396,6 +399,13 @@ Future<Map<String, Object?>> _weightImportOn() async {
   final import = WeightImport.current;
   if (import == null) throw StateError('the weight import did not start');
   return {'filed': await import.turnOn()};
+}
+
+// The import waits out its interval after a run; a journey can't, so it runs it as that would.
+Future<Map<String, Object?>> _weightImportNow() async {
+  final import = WeightImport.current;
+  if (import == null) throw StateError('the weight import did not start');
+  return {'filed': await import.runNow()};
 }
 
 Future<Map<String, Object?>> _seedDemo() async {
