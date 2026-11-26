@@ -23,8 +23,23 @@ export const J2_TYPED = {
     { meal: 'dinner', query: 'lettuce romaine', pattern: '^Lettuce, cos or romaine', loose: '^Lettuce', grams: 80 },
   ],
 }
-export const SCRIPTED = ['J1', 'J2']
-export const PROFILE_OF = { J1: 'ux', J2: 'owner' }
+/** J3, a snack logged yesterday from the Diary, on the ux profile. */
+export const J3_TYPED = {
+  SNACK: { meal: 'snack', query: 'almonds unroasted', pattern: '^Almonds, unroasted', loose: '^Almonds', grams: 30 },
+}
+/** J4, on the owner profile: the lunch logged yesterday first when the profile holds none there. */
+export const J4_TYPED = {
+  SEED: { meal: 'lunch', query: 'chicken breast grilled', pattern: '^Chicken breast, grilled', loose: '[Cc]hicken', grams: 150 },
+}
+/**
+ * J5, on the ux profile: a product a scan made online would have cached. 200… is the in-store
+ * range, which no product sold anywhere carries; its check digit is valid.
+ */
+export const J5_TYPED = {
+  PRODUCT: { meal: 'snack', code: '2000000000008', name: 'Journey muesli bar', pattern: '^Journey muesli bar', grams: 45, per100: { kcal: 412, protein: 8.5, carbs: 62, fat: 13.2 } },
+}
+export const SCRIPTED = ['J1', 'J2', 'J3', 'J4', 'J5', 'J6']
+export const PROFILE_OF = { J1: 'ux', J2: 'owner', J3: 'ux', J4: 'owner', J5: 'ux', J6: 'owner' }
 
 const WEIGHED = new Set(['g', 'ml', 'gram', 'grams', 'milliliter', 'gml'])
 const near = (a, b, tol) => a != null && b != null && Math.abs(Number(a) - Number(b)) <= tol
@@ -154,7 +169,101 @@ export function checkJ2(run) {
   }
 }
 
-export const CHECKS = { J1: checkJ1, J2: checkJ2 }
+/** The entries of `a` that `b` lacks and those `b` adds, one for one: both empty when the day is unchanged. */
+const changed = (a, b) => ({ gone: added(b, a), extra: added(a, b) })
+const names = es => es.map(e => `${e.name} ${e.amount} ${e.unit}`).join(', ') || 'none'
+
+/**
+ * J3, yesterday's snack, on the ux profile. `run`: { before, after (today's state, each with
+ * `yesterday`: that day's), ui: {} }.
+ */
+export function checkJ3(run) {
+  const { problems, checks, rule } = rules('J3')
+  const T = J3_TYPED.SNACK
+  const { before, after } = run
+  const y = after?.yesterday
+  const mine = added(before?.yesterday, y)
+  const snack = mine.filter(e => matches(e, T.loose))
+  rule('snack logged once yesterday', snack.length === 1 && mine.length === 1, `step 2: yesterday gained ${names(mine)}, not one /${T.loose}/ entry`)
+  const s = snack[0]
+  rule('snack in its meal', s?.meal === T.meal, `step 2: the snack went to ${s?.meal ?? 'nothing'}, not ${T.meal}`)
+  rule('snack at the grams typed', s?.amount === T.grams && WEIGHED.has(String(s?.unit)), `step 2: the snack saved as ${s ? `${s.amount} ${s.unit}` : 'nothing'}, typed ${T.grams} g`)
+  for (const e of mine) for (const p of mathProblems(e)) rule(`${e.name} counts per 100 × amount`, false, p)
+  const t = y?.tracked
+  if (rule('yesterday has its totals', t, 'yesterday has no day totals (state.yesterday.tracked is empty)')) {
+    const all = y.entries || []
+    for (const k of ['kcal', 'protein', 'carbs', 'fat']) {
+      rule(`yesterday ${k} = sum of entries`, near(t[k], sum(all, k), 1), `yesterday's ${k} total is ${t[k]}, its entries add up to ${Math.round(sum(all, k) * 10) / 10}`)
+    }
+  }
+  const today = changed(before, after)
+  rule('today unchanged', !today.gone.length && !today.extra.length, `today changed: gained ${names(today.extra)}, lost ${names(today.gone)}`)
+  return { problems, facts: { checks, entries: mine.map(entryFacts) }, info: { tracked: t ?? null } }
+}
+
+/** Entries the same as a copy keeps them: meal aside (a copy can change it), name, amount, unit, kcal. */
+const copyKey = e => JSON.stringify([e.name, e.amount, e.unit, Math.round(Number(e.kcal) * 10) / 10])
+
+/**
+ * J4, yesterday's lunch copied to today, on the owner profile. `run`: { before, after (today's
+ * state, each with `yesterday`), ui: { yesterdayBefore (yesterday's state just before the copy,
+ * after the lunch logged there when it held none), seeded } }.
+ */
+export function checkJ4(run) {
+  const { problems, checks, rule } = rules('J4')
+  const { before, after, ui = {} } = run
+  const yb = ui.yesterdayBefore ?? before?.yesterday
+  const lunch = (yb?.entries || []).filter(e => e.meal === 'lunch')
+  rule('yesterday had a lunch', lunch.length > 0, 'step 1: yesterday held no lunch to copy')
+  const mine = added(before, after)
+  const got = mine.filter(e => e.meal === 'lunch')
+  const want = lunch.map(copyKey).sort()
+  const have = got.map(copyKey).sort()
+  rule('today gained yesterday\'s lunch', mine.length === got.length && JSON.stringify(want) === JSON.stringify(have), `step 3: today gained ${names(mine)}${mine.length !== got.length ? ' (not all in lunch)' : ''}; yesterday's lunch is ${names(lunch)}`)
+  const y = changed(yb, after?.yesterday)
+  rule('yesterday unchanged', !y.gone.length && !y.extra.length, `step 3: yesterday changed: gained ${names(y.extra)}, lost ${names(y.gone)} (a move, not a copy?)`)
+  return { problems, facts: { checks, entries: got.map(entryFacts) }, info: { seeded: !!ui.seeded } }
+}
+
+/** J5, a barcode looked up offline, on the ux profile. `run`: { before, after, ui: {} }. */
+export function checkJ5(run) {
+  const { problems, checks, rule } = rules('J5')
+  const P = J5_TYPED.PRODUCT
+  const mine = added(run.before, run.after)
+  const p = mine.filter(e => matches(e, P.pattern))
+  rule('product logged once', p.length === 1 && mine.length === 1, `step 3: the lookup saved ${names(mine)}, not one /${P.pattern}/ entry`)
+  const e = p[0]
+  rule('product in its meal', e?.meal === P.meal, `step 3: the product went to ${e?.meal ?? 'nothing'}, not ${P.meal}`)
+  rule('product at the grams typed', e?.amount === P.grams && WEIGHED.has(String(e?.unit)), `step 3: the product saved as ${e ? `${e.amount} ${e.unit}` : 'nothing'}, typed ${P.grams} g`)
+  const off = Object.keys(P.per100).filter(k => !near(e?.per100?.[k], P.per100[k], 0.01))
+  rule('per 100 g as cached', e && !off.length, `step 2: the product's per-100 g ${off.join(', ')} are not the cached product's (${JSON.stringify(e?.per100 ?? null)})`)
+  for (const x of mine) for (const m of mathProblems(x)) rule(`${x.name} counts per 100 × amount`, false, m)
+  return { problems, facts: { checks, entries: mine.map(entryFacts) }, info: {} }
+}
+
+/**
+ * J6, the weekly check-in accepted by hand, on the owner profile. `run`: { before, after, ui: {
+ * due, opened, proposed (the check-in's proposed target as the app computed it on opening),
+ * shownTarget (the target field's value on the screen) } }.
+ */
+export function checkJ6(run) {
+  const { problems, checks, rule } = rules('J6')
+  const { before, after, ui = {} } = run
+  const a = after?.adaptive
+  rule('check-in due', ui.due, 'step 1: no check-in was due after setting the check-in day')
+  rule('check-in screen opened', ui.opened, 'step 2: the check-in did not open from Home\'s card')
+  rule('shown target is the proposed one', near(ui.shownTarget, ui.proposed, 1), `step 2: the screen shows ${ui.shownTarget}, the check-in proposes ${ui.proposed}`)
+  const last = a?.lastCheckIn
+  rule('accepted target is the shown one', last?.daysAgo === 0 && near(last.acceptedKcal, ui.shownTarget, 1), `step 3: the last check-in is ${last ? `${last.acceptedKcal} kcal, ${last.daysAgo} days ago` : 'none'}, the screen showed ${ui.shownTarget}`)
+  const s = after?.shown
+  const goal = last ? last.acceptedKcal + (a.goalOffsetKcal || 0) + (a.goalActivityKcal || 0) : null
+  rule('Home shows the new target', s && near(s.goalKcal, goal, 1), `step 4: Home's goal is ${s?.goalKcal ?? 'not shown'}, the accepted target with today's weekday offset and activity is ${goal}`)
+  rule('history gains one row', a?.checkIns === (before?.adaptive?.checkIns ?? NaN) + 1, `step 3: the check-in history went from ${before?.adaptive?.checkIns} to ${a?.checkIns} rows, not one more`)
+  // the numbers move with the calendar, so they are not facts
+  return { problems, facts: { checks }, info: { proposed: ui.proposed, shownTarget: ui.shownTarget, lastCheckIn: last ?? null, shown: s ?? null } }
+}
+
+export const CHECKS = { J1: checkJ1, J2: checkJ2, J3: checkJ3, J4: checkJ4, J5: checkJ5, J6: checkJ6 }
 
 /** Differences between two fact trees, one line per value: "path: before → after". */
 export function diffFacts(a, b, path = '') {

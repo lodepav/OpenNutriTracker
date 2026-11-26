@@ -4,7 +4,7 @@
 // reads what was saved through the journey entry point's `state` command and checks it
 // (journey-lib.mjs). The app must be the journey build (lib/fork/dev/main_journey.dart).
 //
-//   node fork/tools/journey-check.mjs run <J1|J2> <out.json> [--base <baseline.json>]
+//   node fork/tools/journey-check.mjs run <J1..J6> <out.json> [--base <baseline.json>]
 //   node fork/tools/journey-check.mjs network              # exit 2 naming any path off the device
 //   node fork/tools/journey-check.mjs request '<json>'      # one requestData command (seedDemo, ...)
 //   node fork/tools/journey-check.mjs import <app path>    # Settings → Data → Import history
@@ -16,7 +16,7 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { CHECKS, J1_TYPED, J2_TYPED, report } from './journey-lib.mjs'
+import { CHECKS, J1_TYPED, J2_TYPED, J3_TYPED, J4_TYPED, J5_TYPED, report } from './journey-lib.mjs'
 
 const ADB = process.env.ADB || homedir() + '/Android/Sdk/platform-tools/adb'
 const APP_ID = process.env.APP_ID || 'io.github.lodepav.openbite.develop'
@@ -170,6 +170,18 @@ async function pickMeal(chip, meal) {
 
 const today = () => adb('shell', 'date', '+%Y-%m-%d')
 const state = () => request({ cmd: 'state', date: today() })
+const stateOn = date => request({ cmd: 'state', date })
+/** The calendar day `n` days from `day` (YYYY-MM-DD). */
+const shiftDay = (day, n) => { const t = new Date(day + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10) }
+// journeys whose checks read yesterday too
+const WITH_YESTERDAY = new Set(['J3', 'J4'])
+const snap = async J => {
+  const s = await state()
+  if (WITH_YESTERDAY.has(J)) s.yesterday = await stateOn(shiftDay(today(), -1))
+  return s
+}
+const label = meal => meal[0].toUpperCase() + meal.slice(1)
+const GO_TODAY = { tooltip: '^Go to today$' }
 
 /** Home → + → `meal` → search: the Add food screen with the bundled foods' tab chosen. */
 async function searchFoods(meal, query) {
@@ -196,6 +208,47 @@ async function addWeighed(food, grams) {
   await tap({ text: '^Grams$' }, 'choose grams')
   await type({ key: 'amount-field' }, grams)
   await tapEither('meal-detail-add')
+}
+
+/** Home → Diary → one swipe to the right: the Diary steps back a day (S176), and offers "Go to today". */
+async function diaryYesterday() {
+  await home()
+  await tap({ id: 'nav-diary' })
+  if (await seen(GO_TODAY)) throw new Error('the Diary was not on today')
+  // one swipe, never retried: a second would step another day back
+  // a real touch swipe, left to right low on the list: the driver's synthetic scroll never reached
+  // the Diary's drag handler
+  const [w, h] = adb('shell', 'wm', 'size').match(/(\d+)x(\d+)\s*$/).slice(1).map(Number)
+  adb('shell', 'input', 'swipe', String(Math.round(w * 0.15)), String(Math.round(h * 0.75)), String(Math.round(w * 0.85)), String(Math.round(h * 0.75)), '200')
+  await sleep(400)
+  if (!(await until(() => seen(GO_TODAY), 8))) throw new Error('the swipe did not step the Diary back a day')
+}
+
+/** On the day the Diary shows: the meal's +, the Food source, the row, grams typed, Add. */
+async function addOnShownDay(food) {
+  const plus = { tooltip: `^Add to ${label(food.meal)}$` }
+  await reveal(plus)
+  await tap(plus, `add to ${food.meal} on the day shown`)
+  await type({ id: 'meal-search-field' }, food.query)
+  await reveal({ text: '^Food$' }, true)
+  await tap({ text: '^Food$' }, 'choose the Food source')
+  const row = (await until(() => seen({ text: food.pattern }), 10)) ? { text: food.pattern } : { text: food.loose }
+  await tap(row, `open ${food.pattern}`)
+  await tap({ text: '^Grams$' }, 'choose grams')
+  await type({ key: 'amount-field' }, food.grams)
+  await tapEither('meal-detail-add')
+}
+
+/** From wherever the add left the app, the Diary again, still on the day before. */
+async function backToDiaryYesterday() {
+  if (await until(() => seen(GO_TODAY), 4)) return
+  // the app came back to the Diary on today: a day back again
+  await diaryYesterday()
+}
+/** Today in the Diary: Go to today when it is on another day; an add or a copy may have put it there already. */
+async function diaryToday() {
+  if (await seen(GO_TODAY)) await tap(GO_TODAY)
+  if (!(await until(async () => !(await seen(GO_TODAY)), 8))) throw new Error('the Diary did not come back to today')
 }
 
 async function J1(ui) {
@@ -278,7 +331,93 @@ async function J2(ui) {
   ui.checkInOpened = await until(() => seen({ key: 'check-in-target' }), 16)
 }
 
-const JOURNEYS = { J1, J2 }
+async function J3(ui) {
+  const T = J3_TYPED.SNACK
+  const y = shiftDay(today(), -1)
+  const count = async () => (await stateOn(y)).entries.filter(e => new RegExp(T.loose).test(e.name)).length
+  const before = await count()
+  // 1. the Diary, a day back
+  await diaryYesterday()
+  // 2. a snack by search, in grams, from the section's +
+  await addOnShownDay(T)
+  await must('the snack is saved yesterday', async () => { if ((await count()) !== before + 1) throw new Error('not saved') })
+  // 3. back to today
+  await diaryToday()
+  ui.backToToday = true
+  await home()
+}
+
+async function J4(ui) {
+  const y = shiftDay(today(), -1)
+  const lunchOf = s => s.entries.filter(e => e.meal === 'lunch')
+  // 1. the Diary, a day back
+  await diaryYesterday()
+  // a profile made more than a day ago holds no lunch yesterday: one is logged there first, as J3 logs
+  if (!lunchOf(await stateOn(y)).length) {
+    await addOnShownDay(J4_TYPED.SEED)
+    await must('the lunch is saved yesterday', async () => { if (!lunchOf(await stateOn(y)).length) throw new Error('not saved') })
+    ui.seeded = true
+    await backToDiaryYesterday()
+  }
+  ui.yesterdayBefore = await stateOn(y)
+  const want = lunchOf(await state()).length + lunchOf(ui.yesterdayBefore).length
+  // 2. a tap on the meal's header selects all of it (D30)
+  await reveal({ text: '^Lunch$' })
+  await tap({ text: '^Lunch$' }, "select yesterday's lunch")
+  // 3. the bar's Copy, to today, at the same times, into lunch (the sheet's defaults for one meal)
+  await tap({ key: 'fork-selection-copy' })
+  await tap({ key: 'fork-where-day0' }, 'copy to today')
+  await tap({ key: 'fork-where-done' }, 'copy')
+  await must("the copy is in today's lunch", async () => { if (lunchOf(await state()).length !== want) throw new Error('not copied') })
+  await diaryToday()
+  await home()
+}
+
+async function J5(ui) {
+  const P = J5_TYPED.PRODUCT
+  // 1. the product as an earlier scan made online left it in the scan cache
+  await request({ cmd: 'cacheProduct', code: P.code, name: P.name, per100: P.per100 })
+  // 2. the code typed into search and submitted: a valid barcode goes to the scanner's lookup,
+  // which reads the cache before the network, with no camera
+  await home()
+  await tapEither('fab-add-item')
+  await tapEither('add-item-' + P.meal)
+  await tapEither('add-item-search')
+  await type({ id: 'meal-search-field' }, P.code)
+  await driver({ command: 'send_text_input_action', action: 'search' })
+  if (!(await until(() => seen({ key: 'amount-field' }), 16))) throw new Error('the lookup opened no product (is it in the scan cache?)')
+  ui.productOpened = true
+  // 3. grams typed, Add
+  if (await seen({ text: '^Grams$' })) await tap({ text: '^Grams$' }, 'choose grams')
+  await type({ key: 'amount-field' }, P.grams)
+  await tapEither('meal-detail-add')
+  await must('the product is saved', async () => { if (!(await state()).entries.some(e => new RegExp(P.pattern).test(e.name))) throw new Error('not saved') })
+  await home()
+}
+
+async function J6(ui) {
+  // 1. the check-in made due: the check-in day set to today, unless one is due already
+  ui.due = (await request({ cmd: 'checkInDue' })).due
+  const rows = (await state()).adaptive?.checkIns
+  // 2. Home's card for the due check-in (S13) opens it
+  await home()
+  const card = { text: '^(Your first target|Weekly check-in|Your goal changed|Your target settings changed)$' }
+  await reveal(card)
+  ui.proposed = (await state()).adaptive?.proposedTargetKcal
+  await tap(card, "open the check-in from Home's card")
+  ui.opened = await until(() => seen({ key: 'check-in-target' }), 16)
+  if (!ui.opened) throw new Error('the check-in screen did not open')
+  // shortcut: read as kcal; a profile showing kJ would differ by the unit, remake it in kcal
+  ui.shownTarget = Number((await driver({ command: 'get_text', finderType: 'ByValueKey', keyValueString: 'check-in-target', keyValueType: 'String' })).text)
+  // 3. accepted by hand, at the target shown
+  await reveal({ key: 'check-in-accept' })
+  await tap({ key: 'check-in-accept' }, 'accept the check-in')
+  await must('the check-in is saved', async () => { if ((await state()).adaptive?.checkIns !== rows + 1) throw new Error('no new row') }, 20)
+  // 4. Home with the new target
+  await home()
+}
+
+const JOURNEYS = { J1, J2, J3, J4, J5, J6 }
 
 /** Refuses a run while any path off the device is on (exit 2, naming it). */
 async function offline() {
@@ -292,19 +431,19 @@ async function main() {
   if (cmd === 'run') {
     const [J, out] = args
     const base = args.includes('--base') ? JSON.parse(readFileSync(args[args.indexOf('--base') + 1], 'utf8')) : null
-    if (!JOURNEYS[J] || !out) fail('usage: run <J1|J2> <out.json> [--base <baseline.json>]')
+    if (!JOURNEYS[J] || !out) fail('usage: run <J1..J6> <out.json> [--base <baseline.json>]')
     let result
     try {
       await open()
       const net = await offline()
-      const before = await state()
+      const before = await snap(J)
       const ui = {}
       try { await JOURNEYS[J](ui) } catch (e) {
         // the error first: clean-up below may hang on a stuck app
         console.error(`journey-check: ${J}: ${e.message}`)
         ui.error = e.message
       }
-      const after = await state()
+      const after = await snap(J)
       const checked = CHECKS[J]({ before, after, ui })
       if (ui.error) checked.problems.unshift(`${J}: the journey stopped: ${ui.error}`)
       result = { journey: J, ...checked, info: { ...checked.info, blocked: (await request({ cmd: 'network' })).blocked, sourcesOn: net.foodSourceToggles } }

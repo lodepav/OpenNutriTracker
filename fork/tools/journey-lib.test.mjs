@@ -1,7 +1,7 @@
 // node --test fork/tools/journey-lib.test.mjs
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { added, checkJ1, checkJ2, diffFacts, hollow, mathProblems, report } from './journey-lib.mjs'
+import { added, checkJ1, checkJ2, checkJ3, checkJ4, checkJ5, checkJ6, diffFacts, hollow, mathProblems, report } from './journey-lib.mjs'
 
 const per = (kcal, protein, carbs, fat) => ({ kcal, protein, carbs, fat })
 const at = (meal, name, amount, p, unit = 'g') => ({
@@ -150,4 +150,141 @@ test('a photo lunch saved twice (a submit tapped twice) fails', () => {
   const twice = at('lunch', 'Chicken rice bowl', 430, per(114, 12, 10, 2))
   const r = checkJ2({ before: day([]), after: day([twice, twice], { weight: { kg: 79, source: 'health' }, adaptive }), ui: { checkInOpened: true } })
   assert.ok(r.problems.some(p => p.includes('saved 2 entries, not 1')))
+})
+
+// J3: a snack logged on yesterday from the Diary; the day row holds the totals the Diary shows
+const ALMONDS = per(579, 21.2, 21.6, 49.9)
+const tracked = entries => {
+  // the day row adds the unrounded values, so it drifts from the rounded entries by a little
+  const s = k => Math.round(entries.reduce((n, e) => n + e[k], 0) * 10) / 10 + 0.04
+  return { kcal: s('kcal'), protein: s('protein'), carbs: s('carbs'), fat: s('fat') }
+}
+const yday = (entries, extra = {}) => ({ entries, tracked: entries.length ? tracked(entries) : null, shown: null, ...extra })
+const demoLunch = at('lunch', 'Brown rice', 180, per(112, 2.3, 23.5, 0.8))
+const todayDay = day([lunch])
+const j3 = ({ y = [demoLunch, at('snack', 'Almonds, unroasted', 30, ALMONDS)], today = todayDay, yExtra = {} } = {}) => checkJ3({
+  before: { ...todayDay, yesterday: yday([demoLunch]) },
+  after: { ...today, yesterday: yday(y, yExtra) },
+  ui: { backToToday: true },
+})
+
+test('a good J3 run has no problems and keeps the snack alone', () => {
+  const r = j3()
+  assert.deepEqual(r.problems, [])
+  assert.deepEqual(r.facts.entries.map(e => [e.name, e.amount]), [['Almonds, unroasted', 30]])
+  assert.equal(report('J3', r).code, 0)
+})
+
+test('J3: a snack that landed on today fails twice: none yesterday, today changed', () => {
+  const r = j3({ y: [demoLunch], today: day([lunch, at('snack', 'Almonds, unroasted', 30, ALMONDS)]) })
+  assert.ok(r.problems.some(p => p.includes('yesterday gained none')), r.problems.join('\n'))
+  assert.ok(r.problems.some(p => p.includes('today changed: gained Almonds, unroasted 30 g')))
+  assert.match(report('J3', r).text, /hollow fact entries/)
+})
+
+test("J3: a day row that missed the snack fails yesterday's totals", () => {
+  const y = [demoLunch, at('snack', 'Almonds, unroasted', 30, ALMONDS)]
+  const r = j3({ y, yExtra: { tracked: tracked([demoLunch]) } })
+  assert.ok(r.problems.some(p => p.includes("yesterday's kcal total is")), r.problems.join('\n'))
+})
+
+test('J3: no day row yesterday is a failure, not a pass', () => {
+  const r = j3({ yExtra: { tracked: null } })
+  assert.ok(r.problems.some(p => p.includes('yesterday has no day totals')))
+})
+
+test('J3: the snack saved as a serving is not the grams typed', () => {
+  const r = j3({ y: [demoLunch, at('snack', 'Almonds, unroasted', 1, ALMONDS, 'serving')] })
+  assert.ok(r.problems.some(p => p.includes('saved as 1 serving, typed 30 g')))
+})
+
+// J4: yesterday's lunch, one food imported food by food and one logged here, copied to today
+const owLunch = [
+  at('lunch', 'Chicken breast, grilled without sauce, skin not eaten', 150, CHICKEN),
+  { ...at('lunch', 'Rice, white, long-grain, regular, enriched, cooked', 212.5, RICE), source: 'custom' },
+]
+const owYesterday = yday([at('breakfast', 'Oats, raw', 60, OATS), ...owLunch])
+const j4 = (todayAfter, yAfter = owYesterday, ui = {}) => checkJ4({
+  before: { ...day([]), yesterday: yday([]) },
+  after: { ...day(todayAfter), yesterday: yAfter },
+  // the profile held no lunch yesterday, so the journey logged one before the copy
+  ui: { yesterdayBefore: owYesterday, seeded: true, ...ui },
+})
+
+test('a good J4 run has no problems; its facts are the copied lunch', () => {
+  const r = j4(owLunch)
+  assert.deepEqual(r.problems, [])
+  assert.equal(r.facts.entries.length, 2)
+  assert.equal(r.info.seeded, true)
+  assert.equal(report('J4', r).code, 0)
+})
+
+test('J4: a move empties yesterday and fails', () => {
+  const r = j4(owLunch, yday([at('breakfast', 'Oats, raw', 60, OATS)]))
+  assert.ok(r.problems.some(p => p.includes('yesterday changed') && p.includes('lost Chicken')), r.problems.join('\n'))
+})
+
+test('J4: a copy that dropped a food or changed its amount fails', () => {
+  assert.ok(j4([owLunch[0]]).problems.some(p => p.includes("yesterday's lunch is")))
+  assert.ok(j4([owLunch[0], at('lunch', owLunch[1].name, 212, RICE)]).problems.some(p => p.includes('today gained')))
+})
+
+test('J4: a copy into another meal is not a lunch copy', () => {
+  const r = j4(owLunch.map(e => ({ ...e, meal: 'snack' })))
+  assert.ok(r.problems.some(p => p.includes('(not all in lunch)')), r.problems.join('\n'))
+})
+
+test('J4: no lunch yesterday to copy fails', () => {
+  const r = j4([], yday([]), { yesterdayBefore: yday([]) })
+  assert.ok(r.problems.some(p => p.includes('yesterday held no lunch')))
+})
+
+// J5: the cached product, logged in grams; the handler gives per100 as the cache holds it
+const BAR = per(412, 8.5, 62, 13.2)
+const bar = (grams = 45, p = BAR) => ({ ...at('snack', 'Journey muesli bar', grams, p), source: 'off' })
+const j5 = entries => checkJ5({ before: day([lunch]), after: day([lunch, ...entries]), ui: { productOpened: true } })
+
+test('a good J5 run has no problems', () => {
+  const r = j5([bar()])
+  assert.deepEqual(r.problems, [])
+  assert.equal(report('J5', r).code, 0)
+})
+
+test('J5: logged twice fails', () => {
+  assert.ok(j5([bar(), bar()]).problems.some(p => p.includes('not one /^Journey muesli bar/ entry')))
+})
+
+test('J5: a product with other per-100 values than the cached one fails', () => {
+  // a thin search result under the same code: energy only
+  const r = j5([bar(45, { kcal: 412, protein: null, carbs: null, fat: null })])
+  assert.ok(r.problems.some(p => p.includes('per-100 g protein, carbs, fat')), r.problems.join('\n'))
+})
+
+// J6: the check-in made due, opened from Home's card and accepted as shown
+const ad = (rows, last, extra = {}) => ({ ...adaptive, checkIns: rows, goalOffsetKcal: 0, goalActivityKcal: 0, lastCheckIn: last, ...extra })
+const j6 = ({ rows = 1, accepted = 2111, goal = 2111, ui = {}, extra = {} } = {}) => checkJ6({
+  before: day([], { adaptive: ad(0, null) }),
+  after: { ...day([]), shown: { ...shown([]), goalKcal: goal, leftKcal: goal }, adaptive: ad(rows, { daysAgo: 0, acceptedKcal: accepted, expenditureKcal: 2611 }, extra) },
+  ui: { due: true, opened: true, proposed: 2111, shownTarget: 2111, ...ui },
+})
+
+test('a good J6 run has no problems, and its facts hold no calendar numbers', () => {
+  const r = j6()
+  assert.deepEqual(r.problems, [])
+  assert.deepEqual(Object.keys(r.facts), ['checks'])
+  assert.equal(report('J6', r, r.facts).code, 0)
+})
+
+test("J6: Home's goal counts the weekday offset and today's activity", () => {
+  assert.deepEqual(j6({ goal: 2361, extra: { goalOffsetKcal: 200, goalActivityKcal: 50 } }).problems, [])
+  assert.ok(j6({ goal: 2150 }).problems.some(p => p.includes("Home's goal is 2150")))
+})
+
+test('J6: an accepted target other than the one shown fails', () => {
+  const r = j6({ accepted: 2000, goal: 2000 })
+  assert.ok(r.problems.some(p => p.includes('the screen showed 2111')), r.problems.join('\n'))
+})
+
+test('J6: a check-in that replaced the last row gains none and fails', () => {
+  assert.ok(j6({ rows: 0 }).problems.some(p => p.includes('from 0 to 0 rows')))
 })

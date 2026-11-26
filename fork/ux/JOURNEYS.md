@@ -13,7 +13,8 @@ fork/tools/journey-lib.test.mjs`).
 ```sh
 fork/tools/journey-check.sh --build --make-ux-profile          # once: build, boot, make the ux profile
 fork/tools/journey-check.sh --make-owner-profile <export.csv>  # once: the owner profile, from a MacroFactor export
-ANDROID_SERIAL=emulator-5556 fork/tools/journey-check.sh       # J1 and J2
+ANDROID_SERIAL=emulator-5556 fork/tools/journey-check.sh       # J1 to J6
+fork/tools/journey-check.sh J3 J5                              # these only
 fork/tools/journey-check.sh --accept J2                        # the differences are meant: keep this run as J2's baseline
 ```
 
@@ -41,7 +42,10 @@ printed; put it back by hand with `adb exec-in run-as <pkg> tar -xf - < app.tar`
 A profile is loaded the same way, untarred over the folders. A file on the device that the profile
 does not hold would run with it, so the journey is refused (exit 2) and the file named. A box the
 app opens for the first time (`fork_meal_groups.hive` was one) does this once: remake the profile,
-which then holds it.
+which then holds it. Both `--make-…-profile` runs first open every box of the active profile
+(`openBoxes`: upstream's open at start, the fork's are `forkProfileBoxes`), so a box a journey
+writes to is in the profile and the restore overwrites it. A new owner profile adds that profile's
+boxes to the device: make the owner profile first, then the ux profile, which then holds them.
 
 ## Profiles
 
@@ -49,10 +53,14 @@ In `~/.cache/openbite/`, never in the repo:
 
 - `ux-profile.tar`: the demo data (`DemoSeedOptions.dev`, through the `seedDemo` command) over the
   app as it was, restarted past onboarding. `--make-ux-profile`.
-- `owner-profile.tar`: the owner's MacroFactor export imported through Settings → Data → Import
-  history, the calorie target set to Adaptive (Settings → Goals → Trend and calorie target), and
-  the weight import turned on against the fake Health Connect.
-  `--make-owner-profile <csv>`. The CSV is only read: it is copied into the app's cache on the
+- `owner-profile.tar`: a new profile, "Owner", made beside what the app holds by the app's own
+  use cases (`ownerProfile`: CreateProfileUsecase, SwitchProfileUsecase, then onboarding's save
+  with the values its pages start on: male, born 1990-01-01, 180 cm, 80 kg, maintain, low
+  activity, no reminder; onboarding's 80 kg weigh-in is taken back). The app restarts into it.
+  Then the owner's MacroFactor export imported through Settings → Data → Import history, the
+  calorie target set to Adaptive (Settings → Goals → Trend and calorie target), and the weight
+  import turned on against the fake Health Connect. The archive holds both profiles; the owner's
+  is active, so no fact depends on the demo. `--make-owner-profile <csv>`. The CSV is only read: it is copied into the app's cache on the
   device and handed to the import by a stand-in file picker.
 
 A profile opens only on the install it was made on: the core boxes' key sits in that AVD's
@@ -97,3 +105,59 @@ totals: Home's totals are the sum of the day's entries, left is the goal minus e
 the check-in computes an expenditure and a target, the screen opens, and its numbers differ from
 the baseline as a DIFF. Weight: today has a weigh-in, from Health Connect. Facts: the check
 outcomes, the new entries, the check-in's numbers and the weigh-in.
+
+## J3: Log yesterday (ux profile)
+
+1. Diary, one swipe to the right (a real touch, `adb shell input swipe`, low on the list; the
+   driver's synthetic scroll never reached the drag handler): the Diary steps back a day (S176)
+   and offers Go to today. An add or a copy brings the Diary back on today; the journey swipes
+   back again where it needs yesterday.
+2. A snack by search, in grams: Snack's + on yesterday ("Add to Snack"), the Food source,
+   "almonds unroasted", the row "Almonds, unroasted", 30 g, Add.
+3. Back to today: Go to today.
+
+**Check:** the snack is the one entry yesterday gained, in Snack, at the 30 g typed, its kcal,
+protein, carbs and fat per-100 g × grams. Yesterday's totals (its day row, as the Diary shows
+them) are the sum of yesterday's entries, a day row missing counted as a failure. Today is
+unchanged from before the journey. Facts: the check outcomes and the snack.
+
+## J4: Copy a meal (owner profile)
+
+1. Diary, one swipe to the right, to yesterday. A profile made more than a day ago holds no lunch
+   there: one is logged first as J3 logs, "Chicken breast, grilled" 150 g into Lunch.
+2. A tap on yesterday's Lunch header selects all of it (D30).
+3. The bar's Copy, Today, Copy: the sheet keeps the same times and Lunch. Then Go to today.
+   (Home's "Same lunch as yesterday" shows only while the clock's meal is lunch: not scripted.)
+
+**Check:** yesterday held a lunch before the copy. Today gained exactly yesterday's lunch entries,
+same names, amounts and kcal, all in Lunch, nothing else. Yesterday is unchanged by the copy.
+Facts: the check outcomes and the copied entries.
+
+## J5: Barcode, offline (ux profile)
+
+1. A product in the scan cache, as a scan made online leaves it (`cacheProduct`: the full
+   record of "Journey muesli bar", code 2000000000008, the in-store range no sold product uses).
+   The lookup reads the user's own foods, then this cache, then the network
+   (SearchProductByBarcodeUseCase), so with the cache it needs none.
+2. + → Snack → search, the code typed and submitted: a valid barcode goes to the scanner's lookup
+   without the camera.
+3. Grams, 45 g, Add.
+
+**Check:** the product is the one entry the journey added, in Snack, at the 45 g typed. Its
+per-100 g values are the cached product's, and its kcal, protein, carbs and fat are per-100 g ×
+grams. Facts: the check outcomes and the entry.
+
+## J6: Weekly check-in by hand (owner profile)
+
+1. The check-in made due (`checkInDue`): due already on a profile without check-ins, else the
+   check-in day (Settings → Goals → Trend and calorie target → Expenditure and check-ins) set to
+   today. No clock is moved.
+2. Home's card for it ("Your first target", "Weekly check-in", ...) opens the check-in; the
+   target field's value is read.
+3. Accept, at the target shown.
+4. Back to Home.
+
+**Check:** a check-in was due and its screen opened from Home's card. The target shown is the one
+the check-in proposes. The accepted target, recorded today, is the one shown. Home's goal is the
+accepted target with today's weekday offset and counted activity. The check-in history gained
+one row. Facts: the check outcomes only; the numbers move with the calendar.
