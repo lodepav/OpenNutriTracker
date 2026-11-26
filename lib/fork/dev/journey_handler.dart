@@ -14,22 +14,37 @@ import 'package:flutter_driver/flutter_driver.dart' show SerializableFinder;
 import 'package:flutter_test/flutter_test.dart'
     show ChainedFinder, Finder, Plurality, find;
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
+import 'package:opennutritracker/core/data/data_source/remote_search_cache_data_source.dart';
+import 'package:opennutritracker/core/data/dbo/meal_dbo.dart';
 import 'package:opennutritracker/core/data/repository/intake_repository.dart';
+import 'package:opennutritracker/core/data/repository/tracked_day_repository.dart';
 import 'package:opennutritracker/core/data/repository/weight_log_repository.dart';
 import 'package:opennutritracker/core/domain/entity/intake_entity.dart';
 import 'package:opennutritracker/core/domain/entity/intake_type_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_gender_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_pal_entity.dart';
+import 'package:opennutritracker/core/domain/entity/user_weight_goal_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/create_profile_usecase.dart';
 import 'package:opennutritracker/core/domain/usecase/get_config_usecase.dart';
+import 'package:opennutritracker/core/domain/usecase/switch_profile_usecase.dart';
 import 'package:opennutritracker/core/utils/ai_credential_storage.dart';
 import 'package:opennutritracker/core/utils/demo/demo_seeder.dart';
 import 'package:opennutritracker/core/utils/extensions.dart';
 import 'package:opennutritracker/core/utils/hive_db_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
+import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
 import 'package:opennutritracker/features/home/presentation/bloc/home_bloc.dart';
+import 'package:opennutritracker/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:opennutritracker/features/profile/presentation/utils/profile_switch_coordinator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/backup/auto_backup.dart';
+import 'package:opennutritracker/fork/demo/demo_profile.dart';
 import 'package:opennutritracker/fork/dev/fake_ai.dart';
 import 'package:opennutritracker/fork/dev/fake_health.dart';
+import 'package:opennutritracker/fork/backup/profile_wipe.dart';
 import 'package:opennutritracker/fork/health/weight_import.dart';
 import 'package:opennutritracker/fork/off/off_contribution.dart';
 import 'package:path_provider/path_provider.dart';
@@ -235,7 +250,11 @@ Future<String> journeyHandler(String? message) async {
       'importMacroFactor' => _armPicker(cmd['path'] as String),
       'weightImportOn' => await _weightImportOn(),
       'weightImportNow' => await _weightImportNow(),
+      'openBoxes' => await _openBoxes(),
       'seedDemo' => await _seedDemo(),
+      'ownerProfile' => await _ownerProfile(cmd['name'] as String),
+      'cacheProduct' => await _cacheProduct(cmd),
+      'checkInDue' => await _checkInDue(),
       final other => throw ArgumentError('unknown cmd $other'),
     };
     return jsonEncode({'ok': true, ...out});
@@ -268,8 +287,9 @@ Map<String, Object?> _entry(IntakeEntity i) {
   };
 }
 
-/// That day's entries as saved, Home's totals as it shows them (today
-/// only), its weigh-in and the check-in's numbers.
+/// That day's entries as saved, its day row's totals (the Diary's), Home's
+/// totals as it shows them (today only), its weigh-in, and the check-in's
+/// numbers with the history's length and what Home adds to the target.
 Future<Map<String, Object?>> _state(DateTime day) async {
   final config = await locator<GetConfigUsecase>().getConfig();
   final intakes = <IntakeEntity>[];
@@ -303,6 +323,16 @@ Future<Map<String, Object?>> _state(DateTime day) async {
     };
   }
 
+  final row = await locator<TrackedDayRepository>().getTrackedDay(day);
+  final tracked = row == null
+      ? null
+      : {
+          'kcal': _r(row.caloriesTracked),
+          'protein': _r(row.proteinTracked),
+          'carbs': _r(row.carbsTracked),
+          'fat': _r(row.fatTracked),
+        };
+
   Map<String, Object?>? weight;
   if (await locator<WeightLogRepository>().getEntry(day) case final w?) {
     final db = locator<HiveDBProvider>();
@@ -320,6 +350,7 @@ Future<Map<String, Object?>> _state(DateTime day) async {
     final service = AdaptiveService.fromLocator();
     final c = await service.checkIn();
     final last = await service.lastCheckIn();
+    final goal = await forkKcalGoal(DateUtils.dateOnly(day));
     adaptive = {
       'due': await service.checkInDue(),
       'expenditureKcal': c.expenditureKcal.round(),
@@ -329,6 +360,10 @@ Future<Map<String, Object?>> _state(DateTime day) async {
       'weekChangeKg': c.weekChangeKg == null ? null : _r(c.weekChangeKg, 2),
       'loggedDays': c.loggedDays,
       'weighIns': c.weighIns,
+      'checkIns': (await service.checkIns()).length,
+      // what Home's goal holds besides the accepted target (seam S12)
+      'goalOffsetKcal': goal.weekdayOffsetKcal.round(),
+      'goalActivityKcal': goal.activityKcal.round(),
       'lastCheckIn': last == null
           ? null
           : {
@@ -345,6 +380,7 @@ Future<Map<String, Object?>> _state(DateTime day) async {
 
   return {
     'entries': intakes.map(_entry).toList(),
+    'tracked': tracked,
     'shown': shown,
     'weight': weight,
     'adaptive': adaptive,
@@ -408,8 +444,120 @@ Future<Map<String, Object?>> _weightImportNow() async {
   return {'filed': await import.runNow()};
 }
 
+// Every box of the active profile on disk before the profile is saved: one the app opens first
+// mid-journey would outlive the restore, holding that run's data.
+Future<Map<String, Object?>> _openBoxes() async {
+  final db = locator<HiveDBProvider>();
+  final suffix = db.profileBox.get(db.activeProfileId)?.boxSuffix ?? '';
+  for (final name in forkProfileBoxes) {
+    await db.openScopedBox<dynamic>(name, suffix);
+  }
+  return {'opened': forkProfileBoxes.length};
+}
+
 Future<Map<String, Object?>> _seedDemo() async {
   await seedDemoData(DemoSeedOptions.dev);
   ProfileSwitchCoordinator.reloadTabBlocs();
   return {'seeded': true};
+}
+
+/// A new, empty profile through the app's own use cases (the profile
+/// sheet's Add: CreateProfileUsecase, then the switch's
+/// SwitchProfileUsecase and demo flag), made active and taken past
+/// onboarding with the values its pages start on. The runner restarts the
+/// app after, so every screen reads the new profile.
+Future<Map<String, Object?>> _ownerProfile(String name) async {
+  if (name.trim().isEmpty) throw ArgumentError('a profile needs a name');
+  final profile = await locator<CreateProfileUsecase>().createProfile(
+    name: name.trim(),
+  );
+  await locator<SwitchProfileUsecase>().switchProfile(profile);
+  await syncDemoFlag();
+  final onboarding = locator<OnboardingBloc>()..resetSelection();
+  final pages = onboarding.userSelection;
+  final now = DateTime.now();
+  await onboarding.saveOnboardingData(
+    UserEntity(
+      birthday: DateTime(1990, 1, 1),
+      heightCM: 180,
+      weightKG: 80,
+      gender: UserGenderEntity.male,
+      goal: UserWeightGoalEntity.maintainWeight,
+      pal: UserPALEntity.lowActive,
+    ),
+    pages.acceptDataCollection,
+    pages.heightUsesImperial,
+    pages.bodyWeightUnit,
+    pages.foodUsesImperial,
+    appTheme: pages.appTheme,
+    foodSourceToggles: pages.foodSourceToggles,
+    dailyReminderEnabled: false,
+    reminderLocale: const Locale('en'),
+    useMaterialYou: pages.useMaterialYou,
+    accentColor: pages.accentColor,
+  );
+  // Onboarding files its weight as today's weigh-in. The owner's weigh-ins
+  // come from the export and the scale: a made-up one would sit in the
+  // trend, and as a typed row keep the scale's off today (WeightImport).
+  await locator<WeightLogRepository>().deleteEntry(
+    DateTime(now.year, now.month, now.day),
+  );
+  return {'profile': profile.id, 'name': profile.name};
+}
+
+/// An Open Food Facts product in the scan cache, as a scan made online
+/// leaves it (full record, `detailed`), for the offline lookup of J5.
+Future<Map<String, Object?>> _cacheProduct(Map<String, dynamic> cmd) async {
+  final code = cmd['code'] as String;
+  final per100 = (cmd['per100'] as Map).cast<String, num>();
+  double v(String k) =>
+      per100[k]?.toDouble() ?? (throw ArgumentError('per100 has no $k'));
+  final product = MealEntity(
+    code: code,
+    name: cmd['name'] as String,
+    url: null,
+    mealQuantity: null,
+    mealUnit: 'g',
+    servingQuantity: null,
+    servingUnit: null,
+    servingSize: null,
+    source: MealSourceEntity.off,
+    detailed: true,
+    nutriments: MealNutrimentsEntity(
+      energyKcal100: v('kcal'),
+      carbohydrates100: v('carbs'),
+      fat100: v('fat'),
+      proteins100: v('protein'),
+      sugars100: null,
+      saturatedFat100: null,
+      fiber100: null,
+    ),
+  );
+  await locator<RemoteSearchCacheDataSource>().cache(
+    MealDBO.fromMealEntity(product),
+  );
+  return {'cached': code};
+}
+
+/// Makes the weekly check-in due the way the user would: the check-in day
+/// (Settings, Expenditure and check-ins) set to today. Nothing when one is
+/// due already, as on a profile without check-ins.
+Future<Map<String, Object?>> _checkInDue() async {
+  final service = AdaptiveService.fromLocator();
+  var moved = false;
+  if (!await service.checkInDue()) {
+    await AdaptiveStore().save(
+      AdaptiveStore.settings.value.copyWith(
+        checkInWeekday: () => DateTime.now().weekday,
+      ),
+    );
+    moved = true;
+  }
+  if (!await service.checkInDue()) {
+    throw StateError(
+      'no check-in is due on its day: is the target Adaptive, or was one '
+      'accepted today?',
+    );
+  }
+  return {'due': true, 'movedCheckInDay': moved};
 }

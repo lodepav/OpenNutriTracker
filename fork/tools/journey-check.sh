@@ -3,7 +3,7 @@
 # emulator by fork/tools/journey-check.mjs, its end state checked and compared with the baseline
 # kept on this machine. Run it after an upstream merge.
 #
-#   ANDROID_SERIAL=emulator-5556 fork/tools/journey-check.sh     # every scripted journey (J1, J2)
+#   ANDROID_SERIAL=emulator-5556 fork/tools/journey-check.sh     # every scripted journey (J1 to J6)
 #   fork/tools/journey-check.sh J2                               # this one only
 #   fork/tools/journey-check.sh --build                          # build the journey APK, boot, install, then check
 #   fork/tools/journey-check.sh --accept J2                      # the differences are meant: keep this run as J2's baseline
@@ -35,20 +35,20 @@ BASES="${BASES:-$CACHE/journeys}"
 # The app's data folders; the engine's own copy of the assets is rebuilt by every install.
 DIRS=(app_flutter shared_prefs files databases no_backup)
 BUILD= MAKE= CSV= ACCEPT=() JOURNEYS=()
-usage() { echo "usage: journey-check.sh [--build] [--accept <J>] [J1 J2] | --make-ux-profile | --make-owner-profile <csv>" >&2; exit 2; }
+usage() { echo "usage: journey-check.sh [--build] [--accept <J>] [J1 .. J6] | --make-ux-profile | --make-owner-profile <csv>" >&2; exit 2; }
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --build) BUILD=1 ;;
-    --accept) [[ ${2:-} == J[12] ]] || usage; ACCEPT+=("$2"); JOURNEYS+=("$2"); shift ;;
+    --accept) [[ ${2:-} == J[1-6] ]] || usage; ACCEPT+=("$2"); JOURNEYS+=("$2"); shift ;;
     --make-ux-profile) MAKE=ux ;;
     --make-owner-profile) [[ -n ${2:-} ]] || usage; MAKE=owner CSV="$2"; shift ;;
-    J1|J2) JOURNEYS+=("$1") ;;
+    J[1-6]) JOURNEYS+=("$1") ;;
     *) usage ;;
   esac
   shift
 done
-[[ ${#JOURNEYS[@]} -gt 0 ]] || JOURNEYS=(J1 J2)
-profile_of() { [[ $1 == J1 ]] && echo "$UX_PROFILE" || echo "$OWNER_PROFILE"; }
+[[ ${#JOURNEYS[@]} -gt 0 ]] || JOURNEYS=(J1 J2 J3 J4 J5 J6)
+profile_of() { case $1 in J1|J3|J5) echo "$UX_PROFILE" ;; *) echo "$OWNER_PROFILE" ;; esac; }
 accepted() { [[ " ${ACCEPT[*]} " == *" $1 "* ]]; }
 command -v node >/dev/null && node -e 'process.exit(typeof WebSocket === "function" ? 0 : 1)' \
   || { echo "journey check: needs node 22 or later (its global WebSocket)" >&2; exit 2; }
@@ -180,18 +180,25 @@ if [[ $MAKE == ux ]]; then
   node fork/tools/journey-check.mjs request '{"cmd":"seedDemo"}' || exit 2
   restart
   node fork/tools/journey-check.mjs network || exit 2
+  node fork/tools/journey-check.mjs request '{"cmd":"openBoxes"}' || exit 2
   keep_profile "$UX_PROFILE"
   exit 0
 fi
 if [[ $MAKE == owner ]]; then
-  # The owner's MacroFactor export through Settings → Data → Import history, the weigh-ins from
-  # the fake Health Connect. The CSV goes to the app's cache: the picker hands the app that path.
+  # A new, empty profile, made active and past onboarding (the app's own use cases), restarted
+  # into; then the owner's MacroFactor export through Settings → Data → Import history, and the
+  # weigh-ins from the fake Health Connect. The CSV goes to the app's cache: the picker hands the
+  # app that path. The app's other profiles stay in the archive, not active.
   "$ADB" exec-in "run-as $APP sh -c 'mkdir -p cache/journey-import && cat > cache/journey-import/owner.csv'" < "$CSV" \
     || { echo "journey check: could not copy $CSV into the app's cache" >&2; exit 2; }
   launch
+  node fork/tools/journey-check.mjs request '{"cmd":"ownerProfile","name":"Owner"}' || exit 2
+  sleep 2   # Hive's writes
+  restart
   node fork/tools/journey-check.mjs import "/data/user/0/$APP/cache/journey-import/owner.csv" || exit 2
   node fork/tools/journey-check.mjs request '{"cmd":"weightImportOn"}' || exit 2
   node fork/tools/journey-check.mjs network || exit 2
+  node fork/tools/journey-check.mjs request '{"cmd":"openBoxes"}' || exit 2
   keep_profile "$OWNER_PROFILE"
   exit 0
 fi
