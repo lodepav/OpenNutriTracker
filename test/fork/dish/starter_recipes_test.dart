@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/core/data/repository/recipe_repository.dart';
 import 'package:opennutritracker/core/domain/entity/recipe_entity.dart';
@@ -8,13 +6,13 @@ import 'package:opennutritracker/core/domain/usecase/save_recipe_usecase.dart';
 import 'package:opennutritracker/fork/dish/starter_recipes.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
+import '../helpers/food_table.dart';
+
 void main() {
   late LocalFoodTable table;
 
   setUpAll(() async {
-    table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    table = await sharedFoodTable();
   });
 
   test('every food id is in the table under the food it was chosen as', () {

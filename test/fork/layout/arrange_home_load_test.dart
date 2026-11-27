@@ -10,6 +10,7 @@ import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
 import 'package:opennutritracker/fork/layout/arrange_screen.dart';
 import 'package:opennutritracker/fork/layout/home_layout.dart';
+import 'package:opennutritracker/fork/layout/layout_store.dart';
 import 'package:opennutritracker/generated/l10n.dart';
 
 import '../../helpers/fake_hive_db_provider.dart';
@@ -57,6 +58,11 @@ void main() {
   });
 
   tearDown(() async {
+    // The editor read the box into the static layouts: a later file in the
+    // same bundle would start from them.
+    for (final key in [homeSectionsKey, homeQuickActionsKey, homeTilesKey]) {
+      LayoutStore.current(key).value = (order: const [], hidden: const {});
+    }
     await locator.unregister<HiveDBProvider>();
     await Hive.deleteFromDisk();
     await dir.delete(recursive: true);

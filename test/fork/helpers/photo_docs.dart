@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:opennutritracker/core/presentation/widgets/user_image_picker_tile.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -39,6 +40,11 @@ class PhotoDocs {
   }
 
   String get picked => '${root.path}/picked.jpg';
+
+  /// A staged pick is still on disk (sync, so a wait condition can ask).
+  bool get hasStaged => root
+      .listSync(recursive: true)
+      .any((e) => e.uri.pathSegments.last.contains('.staged'));
 
   Future<void> write(String relative, List<int> bytes) async {
     final file = File('${root.path}/$relative');
@@ -80,43 +86,66 @@ void fakePicker(WidgetTester tester, String path) {
   );
 }
 
-/// Real time for the file work a tap started.
-Future<void> ioPause() =>
-    Future<void>.delayed(const Duration(milliseconds: 300));
-
-/// File work started in the test's fake zone moves one step per pump, so
-/// pump between real pauses; until [done] holds, when given.
-Future<void> settleWithIo(WidgetTester tester, {bool Function()? done}) async {
-  for (var i = 0; i < (done == null ? 20 : 200); i++) {
-    if (done != null && done()) break;
-    await tester.pump();
+/// Pumps until [done] holds, with real time between pumps for file work
+/// started in the test's fake zone; fails after [limit] of real time.
+Future<void> settleWithIo(
+  WidgetTester tester,
+  bool Function() done, {
+  Duration limit = const Duration(seconds: 20),
+}) async {
+  final watch = Stopwatch()..start();
+  while (!done()) {
+    if (watch.elapsed > limit) fail('settleWithIo: not done after $limit');
+    // A pump with no duration leaves the fake clock, and a route's
+    // transition, where they are.
+    await tester.pump(const Duration(milliseconds: 50));
     await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 40)),
+      () => Future<void>.delayed(const Duration(milliseconds: 5)),
     );
   }
   await tester.pumpAndSettle();
 }
 
-/// Opens the picker tile's sheet and taps [action] in it.
+/// The photo the picker tile shows.
+String? tilePhoto(WidgetTester tester, Finder tile) => tester
+    .widget<UserImagePickerTile>(
+      find.ancestor(of: tile, matching: find.byType(UserImagePickerTile)),
+    )
+    .imagePath;
+
+/// Opens the picker tile's sheet, taps [action] in it, and waits until the
+/// tile shows another photo or the screen says the pick failed.
 Future<void> choose(WidgetTester tester, Finder tile, String action) async {
   await tester.ensureVisible(tile);
   await tester.pumpAndSettle();
+  final before = tilePhoto(tester, tile);
   await tester.tap(tile);
   await tester.pumpAndSettle();
-  await tester.runAsync(() async {
-    await tester.tap(find.text(action));
-    await ioPause();
-  });
-  await settleWithIo(tester);
+  await tester.tap(find.text(action));
+  await settleWithIo(
+    tester,
+    () =>
+        tilePhoto(tester, tile) != before ||
+        find.text('Could not add the photo').evaluate().isNotEmpty,
+  );
 }
 
-/// System Back, and Discard when the screen asks.
-Future<void> backAndDiscard(WidgetTester tester) async {
+/// System Back, and Discard when the screen asks; waits until the editor is
+/// gone and its staged file with it.
+Future<void> backAndDiscard(WidgetTester tester, PhotoDocs docs) async {
   await tester.binding.handlePopRoute();
   await tester.pumpAndSettle();
   final discard = find.widgetWithText(FilledButton, 'Discard');
   if (discard.evaluate().isNotEmpty) {
     await tester.tap(discard);
   }
-  await settleWithIo(tester);
+  await settleWithIo(tester, () => editorClosed(tester) && !docs.hasStaged);
 }
+
+/// The editor is up with its picker tile.
+bool editorOpen(WidgetTester tester) =>
+    find.byType(UserImagePickerTile).evaluate().isNotEmpty;
+
+/// Only the test's home route is left.
+bool editorClosed(WidgetTester tester) =>
+    !tester.state<NavigatorState>(find.byType(Navigator).first).canPop();

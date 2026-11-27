@@ -60,7 +60,7 @@ void main() {
             builder: (_) => ProfileEditorScreen(profile: _alex),
           ),
         );
-    await settleWithIo(tester);
+    await settleWithIo(tester, () => editorOpen(tester));
   }
 
   Finder tile() => find.bySemanticsIdentifier('profile-image-picker');
@@ -69,7 +69,7 @@ void main() {
   testWidgets('Back after a remove leaves the stored photo', (tester) async {
     await open(tester);
     await choose(tester, tile(), 'Remove photo');
-    await backAndDiscard(tester);
+    await backAndDiscard(tester, docs);
 
     expect(find.byType(ProfileEditorScreen), findsNothing);
     expect(await tester.runAsync(() => docs.read(_stored)), storedBytes);
@@ -80,7 +80,7 @@ void main() {
   ) async {
     await open(tester);
     await choose(tester, tile(), 'Choose from gallery');
-    await backAndDiscard(tester);
+    await backAndDiscard(tester, docs);
 
     expect(find.byType(ProfileEditorScreen), findsNothing);
     expect(await tester.runAsync(() => docs.read(_stored)), storedBytes);
@@ -92,7 +92,7 @@ void main() {
   testWidgets('Back with nothing changed does not ask', (tester) async {
     await open(tester);
     await tester.binding.handlePopRoute();
-    await settleWithIo(tester);
+    await settleWithIo(tester, () => editorClosed(tester));
     expect(find.text('Discard'), findsNothing);
     expect(find.byType(ProfileEditorScreen), findsNothing);
   });
@@ -102,7 +102,10 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Sam');
     await tester.pump();
     await tester.binding.handlePopRoute();
-    await settleWithIo(tester);
+    await settleWithIo(
+      tester,
+      () => find.text('Discard').evaluate().isNotEmpty,
+    );
     expect(find.text('Discard'), findsOneWidget);
     expect(find.byType(ProfileEditorScreen), findsOneWidget);
   });
@@ -112,13 +115,10 @@ void main() {
   ) async {
     await open(tester);
     await choose(tester, tile(), 'Choose from gallery');
-    await tester.runAsync(() async {
-      await tester.tap(save());
-      await ioPause();
-    });
+    await tester.tap(save());
     await settleWithIo(
       tester,
-      done: () => find.byType(ProfileEditorScreen).evaluate().isEmpty,
+      () => find.byType(ProfileEditorScreen).evaluate().isEmpty,
     );
 
     expect(update.saved.single.imagePath, _stored);
@@ -131,13 +131,10 @@ void main() {
   testWidgets('Save after a remove deletes the stored photo', (tester) async {
     await open(tester);
     await choose(tester, tile(), 'Remove photo');
-    await tester.runAsync(() async {
-      await tester.tap(save());
-      await ioPause();
-    });
+    await tester.tap(save());
     await settleWithIo(
       tester,
-      done: () => find.byType(ProfileEditorScreen).evaluate().isEmpty,
+      () => find.byType(ProfileEditorScreen).evaluate().isEmpty,
     );
 
     expect(update.saved.single.imagePath, isNull);

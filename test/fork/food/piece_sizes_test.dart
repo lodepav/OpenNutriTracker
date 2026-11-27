@@ -1,7 +1,6 @@
 // S213: a bare count is that many of the food's piece, at a European size.
 // Runs typed text through Log with AI's bloc over the bundled table, with
 // no key, so the parser reads it and the count takes the bloc's own path.
-import 'dart:io';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +18,8 @@ import 'package:opennutritracker/features/add_meal/presentation/bloc/bulk_add_bl
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
 import 'package:opennutritracker/fork/bulk/count_piece.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+
+import '../helpers/food_table.dart';
 
 class _TableOnlySearch implements SearchProductsUseCase {
   final ProductsRepository repository;
@@ -72,9 +73,7 @@ void main() {
   late ResolveParsedMealsUseCase resolver;
 
   setUpAll(() async {
-    table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    table = await sharedFoodTable();
     final foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

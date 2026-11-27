@@ -21,6 +21,8 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/dev/replay_ai.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
+import '../helpers/food_table.dart';
+
 /// The models the eval tests run, from the environment: replay folders,
 /// comma-separated, one model each (fork/eval/REPLAY.md), or an OpenRouter
 /// key with `model@provider` specs. `#auto` after a spec asks for the tool
@@ -303,9 +305,7 @@ class BackoffClient extends http.BaseClient {
 
 /// The bundled food table, as the app searches it.
 Future<LocalFoodDataSource> loadFoodTable() async {
-  final table = LocalFoodTable.fromGzip(
-    await File(LocalFoodDataSource.assetPath).readAsBytes(),
-  );
+  final table = await sharedFoodTable();
   return LocalFoodDataSource(
     loadTable: () async => table,
     readToggles: () async => null,

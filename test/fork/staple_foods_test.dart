@@ -9,7 +9,6 @@
 // cheese, thin crust". The fork's tie-breaks (S73, S74), its list of the
 // row a name means (S75) and variant rule (S70) fixed those, `pepperoni
 // pizza` and the bare names below.
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/meal_detail/util/meal_quantity_converter.dart';
@@ -19,6 +18,8 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed_meals_usecase.dart';
 import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+
+import 'helpers/food_table.dart';
 
 class _TableOnlySearch implements SearchProductsUseCase {
   final ProductsRepository repository;
@@ -52,9 +53,7 @@ void main() {
   late ResolveParsedMealsUseCase resolver;
 
   setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     final foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

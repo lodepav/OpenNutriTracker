@@ -9,6 +9,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
+import '../helpers/food_table.dart';
+
 /// Every dish's id, by its code: the ids the released tables gave them.
 /// Chicken cutlets, pork cutlets and chłodnik took ids Caesar wrap,
 /// rassolnik and Olivier salad had held since the first release, so they
@@ -80,7 +82,7 @@ void main() {
                     as Map)['dishes']
                 as List)
             .cast<Map<String, dynamic>>();
-    table = LocalFoodTable.fromGzip(bytes);
+    table = await sharedFoodTable();
   });
 
   test('no two rows of the table share a food id', () {
