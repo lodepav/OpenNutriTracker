@@ -390,15 +390,15 @@ void main() {
         Updater slow(_SlowClient client) => Updater(
           cacheDir: () async => cache,
           client: client,
-          // Wide of the 100 ms steps: the whole suite can pause a test for
-          // hundreds of milliseconds.
-          stallLimit: const Duration(seconds: 3),
+          // Thirty times the 50 ms steps: the whole suite can pause a test
+          // for hundreds of milliseconds.
+          stallLimit: const Duration(milliseconds: 1500),
         );
-        // Bytes 100 ms apart for longer than the limit in all: never stalled.
+        // Bytes 50 ms apart for longer than the limit in all: never stalled.
         final steady = _SlowClient();
         final finished = slow(steady).install(info);
         for (var i = 0; i < 35; i++) {
-          await Future<void>.delayed(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
           steady.apk.add([i]);
         }
         await steady.apk.close();

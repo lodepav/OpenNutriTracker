@@ -169,7 +169,7 @@ void main() {
       ),
     );
     tester.state<NavigatorState>(find.byType(Navigator)).push(route());
-    await settleWithIo(tester);
+    await settleWithIo(tester, () => editorOpen(tester));
   }
 
   Route<void> builder() => MaterialPageRoute<void>(
@@ -198,7 +198,7 @@ void main() {
     testWidgets('Back after a remove leaves the stored photo', (tester) async {
       await open(tester, _recipePhoto, builder);
       await choose(tester, recipeTile(), 'Remove photo');
-      await backAndDiscard(tester);
+      await backAndDiscard(tester, docs);
 
       expect(find.byType(RecipeBuilderScreen), findsNothing);
       expect(await tester.runAsync(() => docs.read(_recipePhoto)), storedBytes);
@@ -213,7 +213,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.widgetWithText(FilledButton, 'Discard'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Discard'));
-      await settleWithIo(tester);
+      await settleWithIo(tester, () => editorClosed(tester) && !docs.hasStaged);
 
       expect(find.byType(RecipeBuilderScreen), findsNothing);
       expect(await tester.runAsync(() => docs.read(_recipePhoto)), storedBytes);
@@ -227,13 +227,10 @@ void main() {
     ) async {
       await open(tester, _recipePhoto, builder);
       await choose(tester, recipeTile(), 'Choose from gallery');
-      await tester.runAsync(() async {
-        await tester.tap(find.bySemanticsIdentifier('recipe-builder-save'));
-        await ioPause();
-      });
+      await tester.tap(find.bySemanticsIdentifier('recipe-builder-save'));
       await settleWithIo(
         tester,
-        done: () => find.byType(RecipeBuilderScreen).evaluate().isEmpty,
+        () => find.byType(RecipeBuilderScreen).evaluate().isEmpty,
       );
 
       expect(find.byType(RecipeBuilderScreen), findsNothing);
@@ -284,7 +281,7 @@ void main() {
     testWidgets('Back after a remove leaves the stored photo', (tester) async {
       await open(tester, _foodPhoto, editor);
       await choose(tester, foodTile(), 'Remove photo');
-      await backAndDiscard(tester);
+      await backAndDiscard(tester, docs);
 
       expect(find.byType(EditMealScreen), findsNothing);
       expect(await tester.runAsync(() => docs.read(_foodPhoto)), storedBytes);
@@ -293,7 +290,7 @@ void main() {
     testWidgets('Back after a pick leaves the stored photo', (tester) async {
       await open(tester, _foodPhoto, editor);
       await choose(tester, foodTile(), 'Choose from gallery');
-      await backAndDiscard(tester);
+      await backAndDiscard(tester, docs);
 
       expect(find.byType(EditMealScreen), findsNothing);
       expect(await tester.runAsync(() => docs.read(_foodPhoto)), storedBytes);
@@ -307,13 +304,12 @@ void main() {
     ) async {
       await open(tester, _foodPhoto, editor);
       await choose(tester, foodTile(), 'Choose from gallery');
-      await tester.runAsync(() async {
-        await tester.tap(find.text('Save'));
-        await ioPause();
-      });
+      // In real time: Save's unawaited serving-mode write opens a Hive box,
+      // and one left half open in the fake zone hangs a bundle's Hive.close.
+      await tester.runAsync(() => tester.tap(find.text('Save')));
       await settleWithIo(
         tester,
-        done: () => find.byType(EditMealScreen).evaluate().isEmpty,
+        () => find.byType(EditMealScreen).evaluate().isEmpty,
       );
 
       expect(find.byType(EditMealScreen), findsNothing);
