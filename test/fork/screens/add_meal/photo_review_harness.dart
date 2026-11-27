@@ -241,7 +241,11 @@ void setUpReviewHarness(String name) {
     addTearDown(() => forkDayTotals = before);
   });
 
-  tearDown(() async => _getIt.reset());
+  tearDown(() async {
+    // A later file in the same bundle would resolve to these foods.
+    reviewFoods.clear();
+    await _getIt.reset();
+  });
 }
 
 void _tallView(WidgetTester tester) {

@@ -1,7 +1,6 @@
 // Food on a plate is cooked (S186): a photo of cooked penne logged Barilla's
 // dry "Penne Pasta" from Open Food Facts, 1000 kcal for 280 g. Runs the real
 // resolver over the bundled table, with that product as Open Food Facts' hit.
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -13,6 +12,8 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/search_product
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/food/cooked_on_plate.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+
+import '../helpers/food_table.dart';
 
 MealEntity _product(String name, String brand, double kcal, double carbs) =>
     MealEntity(
@@ -72,9 +73,7 @@ void main() {
   late ResolveParsedMealsUseCase resolver;
 
   setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     final foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

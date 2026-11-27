@@ -5,7 +5,6 @@
 // Facts. A photo of a plate shows food, not packets; a typed name may mean
 // one. Runs the real resolver over the bundled table, with those products as
 // Open Food Facts' hits.
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -17,6 +16,8 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/search_product
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 import 'package:opennutritracker/fork/food/unnamed_brand.dart';
+
+import '../helpers/food_table.dart';
 
 MealEntity _product(String name, String? brand, double kcal) => MealEntity(
   code: '$brand $name',
@@ -84,9 +85,7 @@ void main() {
   late ResolveParsedMealsUseCase resolver;
 
   setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     final foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

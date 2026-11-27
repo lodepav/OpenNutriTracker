@@ -1,18 +1,17 @@
 // The table's search folds letters with marks on both sides: "sasliks"
 // typed on an English keyboard found nothing, though a dish is named
 // "Shashlik, chicken (vistas šašliks, ...)".
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+
+import '../helpers/food_table.dart';
 
 void main() {
   late LocalFoodDataSource foods;
 
   setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

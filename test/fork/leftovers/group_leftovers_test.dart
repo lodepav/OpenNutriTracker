@@ -83,10 +83,14 @@ void main() {
   setUp(() async {
     dir = await Directory.systemTemp.createTemp('meal_groups');
     Hive.init(dir.path);
+    // In memory: a file box's reads finish only in real time, which the
+    // widget tests would have to wait out.
+    await Hive.openBox<Map>(MealGroupStore.boxName, bytes: Uint8List(0));
     store = MealGroupStore();
   });
 
   tearDown(() async {
+    await Hive.close();
     await Hive.deleteFromDisk();
     await dir.delete(recursive: true);
   });
@@ -243,8 +247,6 @@ void main() {
       );
       await tester.runAsync(() => store.record(meal, DateTime(2026, 10, 22)));
       await tester.tap(find.text('tap'));
-      // The store reads Hive's file, which fake time does not advance.
-      await tester.runAsync(() => Future.delayed(Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
       return updates;
     }

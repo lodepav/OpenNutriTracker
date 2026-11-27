@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
+import 'helpers/food_table.dart';
+
 Map<String, dynamic> _table(
   List<List<Object?>> foods, [
   Map<String, Object> portions = const {},
@@ -315,11 +317,10 @@ void main() {
   group(
     'the bundled table',
     () {
-      final file = File(LocalFoodDataSource.assetPath);
       late LocalFoodDataSource source;
 
       setUpAll(() async {
-        final table = LocalFoodTable.fromGzip(await file.readAsBytes());
+        final table = await sharedFoodTable();
         source = LocalFoodDataSource(
           loadTable: () async => table,
           readToggles: () async => null,

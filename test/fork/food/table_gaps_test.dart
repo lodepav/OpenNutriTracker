@@ -2,7 +2,6 @@
 // reaches the row it names. Counted table rows log their own piece, and the
 // fork's dishes are not shadowed by the names that point elsewhere. Runs the
 // real resolver over the bundled table as a photo's read.
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -12,6 +11,8 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/features/add_meal/domain/usecase/search_products_usecase.dart';
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+
+import '../helpers/food_table.dart';
 
 class _Search implements SearchProductsUseCase {
   final ProductsRepository repository;
@@ -166,9 +167,7 @@ void main() {
   late ResolveParsedMealsUseCase resolver;
 
   setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     final foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

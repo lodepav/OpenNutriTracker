@@ -2,7 +2,6 @@
 // cooked, stir-fried" logged bacon, "dark leafy greens" a beef-and-rice
 // dish. Runs the real resolver over the bundled table as a photo's read,
 // with the Open Food Facts products the evals met where they found one.
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/features/add_meal/data/data_sources/off_data_source.dart';
@@ -15,6 +14,8 @@ import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 import 'package:opennutritracker/fork/food/served_with.dart';
 import 'package:opennutritracker/fork/food/unasked_variant.dart';
+
+import '../helpers/food_table.dart';
 
 MealEntity _product(String name, double kcal, {String brand = 'Brand'}) =>
     MealEntity(
@@ -103,9 +104,7 @@ void main() {
   late ResolveParsedMealsUseCase resolver;
 
   setUpAll(() async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     final foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

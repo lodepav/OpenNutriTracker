@@ -1,10 +1,11 @@
 // Everyday foods the open tables lack, added as the fork's own dishes
 // (fork/data/dishes.json): each is found under the names people type, starts
 // at its own serving, and has the energy its basis gives.
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
+
+import '../helpers/food_table.dart';
 
 /// A dish's code, the names it is typed as, its serving, and the kcal per
 /// 100 g its basis gives (labels and recipe sites, in dishes.json).
@@ -236,9 +237,7 @@ void main() {
   late LocalFoodDataSource foods;
 
   setUpAll(() async {
-    table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    table = await sharedFoodTable();
     foods = LocalFoodDataSource(
       loadTable: () async => table,
       readToggles: () async => null,

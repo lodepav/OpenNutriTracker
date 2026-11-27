@@ -15,14 +15,13 @@ import 'package:opennutritracker/features/add_meal/domain/usecase/resolve_parsed
 import 'package:opennutritracker/features/add_meal/util/meal_text_parser.dart';
 import 'package:opennutritracker/fork/food/local_food_data_source.dart';
 
+import '../helpers/food_table.dart';
 import 'eval_model.dart';
 
 void main() {
   final path = Platform.environment['FORK_EVAL_AUDIT_QUERIES'];
   test('resolution dump', skip: path == null, () async {
-    final table = LocalFoodTable.fromGzip(
-      await File(LocalFoodDataSource.assetPath).readAsBytes(),
-    );
+    final table = await sharedFoodTable();
     final resolver = ResolveParsedMealsUseCase(
       TableOnlySearch(
         ProductsRepository(
