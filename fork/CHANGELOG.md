@@ -2,6 +2,14 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 1.2.1 · 2026-11-28
+
+Based on OpenNutriTracker 2.7.0.
+
+### Fixes and changes
+
+- charts read at a glance at every range, font and theme; Home macros follow Left/Eaten
+
 ## 1.2.0 · 2026-11-28
 
 Based on OpenNutriTracker 2.7.0.
