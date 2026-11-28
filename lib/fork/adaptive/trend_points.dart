@@ -1,12 +1,11 @@
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/calendar_day_calc.dart';
 import 'package:opennutritracker/core/utils/calc/weight_moving_average.dart';
-import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 
-/// Seam S15: the smoothed trend, one point a day from the
-/// first weigh-in to the last, or on to [until] with the last weigh-in held
-/// as the Goal planner's is; empty without weigh-ins.
+/// Seam S15: the two-sided trend (D70), one point a day from the
+/// first weigh-in to the last, or on to [until] with the last smoothed level
+/// held as the Goal planner's is; empty without weigh-ins.
 List<WeightMovingAveragePoint> trendPoints(
   List<WeightLogEntity> entries, {
   DateTime? until,
@@ -24,13 +23,10 @@ List<WeightMovingAveragePoint> trendPoints(
       : lastWeighIn;
   // Calendar days: across a spring-forward local midnights are 23 h apart.
   final count = CalendarDayCalc.daysBetween(first, last) + 1;
-  final trend = smoothedTrend(
-    dailyWeights({
-      for (final e in entries)
-        CalendarDayCalc.daysBetween(first, e.date): e.weightKg,
-    }, count),
-    alpha: const ExpenditureSettings().alpha,
-  );
+  final trend = twoSidedTrend({
+    for (final e in entries)
+      CalendarDayCalc.daysBetween(first, e.date): e.weightKg,
+  }, count);
   return [
     for (var i = 0; i < count; i++)
       WeightMovingAveragePoint(

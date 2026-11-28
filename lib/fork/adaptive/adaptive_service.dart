@@ -352,13 +352,10 @@ class AdaptiveService {
     final user = await _user.getUserData();
     final days = (await _history()).days;
     final settings = _settings();
-    final trend = smoothedTrend(
-      dailyWeights({
-        for (final (i, d) in days.indexed)
-          if (d.weightKg != null) i: d.weightKg!,
-      }, days.length),
-      alpha: settings.alpha,
-    ).whereType<double>().toList();
+    final trend = twoSidedTrend({
+      for (final (i, d) in days.indexed)
+        if (d.weightKg != null) i: d.weightKg!,
+    }, days.length).whereType<double>().toList();
     if (trend.isEmpty) return null;
     return GoalPlanInputs(
       pastTrendKg: trend.length > pastDays

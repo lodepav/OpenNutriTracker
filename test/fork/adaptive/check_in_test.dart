@@ -757,7 +757,8 @@ void main() {
     final points = trendPoints(await _Weights().getAllEntries());
 
     expect(points, hasLength(59));
-    expect(points.first.weightKg, 90);
+    // The smoothed level on the first day, a touch under its 90 kg (D70).
+    expect(points.first.weightKg, closeTo(89.978, 1e-3));
     expect(points.last.weightKg, lessThan(90));
   });
 

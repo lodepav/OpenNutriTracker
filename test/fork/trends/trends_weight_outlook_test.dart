@@ -12,7 +12,6 @@ import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
 import 'package:opennutritracker/fork/display/display_prefs.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
-import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
@@ -167,10 +166,7 @@ void main() {
       for (final MapEntry(key: d, value: kg) in weighIns.entries)
         WeightLogEntity(date: _day(d - (days - 1)), weightKg: kg),
     ]);
-    final planner = smoothedTrend(
-      dailyWeights(weighIns, days),
-      alpha: const ExpenditureSettings().alpha,
-    ).whereType<double>().toList();
+    final planner = twoSidedTrend(weighIns, days).whereType<double>().toList();
     final week = trendChanges(planner)[7]!;
     final outlook = find.textContaining('Trend: ');
     await tester.scrollUntilVisible(
