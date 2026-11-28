@@ -269,10 +269,12 @@ class _WeightTileState extends State<WeightTile> {
               kgPerWeek,
               widget.unit,
             ).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0'),
-          if (month.length >= 2) '${month.length}-day\u00A0line',
+          // A word joiner keeps "30-day" whole: the fonts lack U+2011.
+          if (month.length >= 2) '${month.length}-\u2060day\u00A0line',
         ]) {
           [] => null,
-          final parts => parts.join(' · '),
+          // A line each: in a half-width tile the two never fit on one.
+          final parts => parts.join('\n'),
         },
         noteMuted: true,
         spokenLabel: weightSpoken(
@@ -357,7 +359,7 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
             ? 'after a weigh-in'
             : '${energyUnit(context)} a day',
         // The line's span: Trends' tiles follow its range instead.
-        note: month.length < 2 ? null : '${month.length}-day\u00A0line',
+        note: month.length < 2 ? null : '${month.length}-\u2060day\u00A0line',
         noteMuted: true,
         spokenLabel: expenditureSpoken(
           days.isEmpty ? null : energyValue(context, days.last.expenditureKcal),

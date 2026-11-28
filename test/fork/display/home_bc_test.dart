@@ -227,7 +227,7 @@ void main() {
       expect(find.textContaining('81 kg'), findsNothing);
       // Its own line under the trend, with the line's span.
       expect(
-        find.text('0\u00A0kg\u00A0in\u00A07\u00A0days · 15-day\u00A0line'),
+        find.text('0\u00A0kg\u00A0in\u00A07\u00A0days\n15-\u2060day\u00A0line'),
         findsOne,
       );
       expect(find.textContaining('2712 ${keepUnits('kcal a day')}'), findsOne);
@@ -633,18 +633,9 @@ void main() {
     ) async {
       await tester.pumpWidget(_app(_dashboard()));
       await tester.pumpAndSettle();
-      expect(
-        find.bySemanticsLabel(RegExp(r'^Carbs: 200 of 251 g, 51 g left$')),
-        findsOne,
-      );
-      expect(
-        find.bySemanticsLabel(RegExp(r'^Fat: 79 of 70 g, 9 g over$')),
-        findsOne,
-      );
-      expect(
-        find.bySemanticsLabel(RegExp(r'^Protein: 42 of 120 g, 78 g left$')),
-        findsOne,
-      );
+      expect(find.bySemanticsLabel(RegExp(r'^Carbs: 51 g left$')), findsOne);
+      expect(find.bySemanticsLabel(RegExp(r'^Fat: 9 g over$')), findsOne);
+      expect(find.bySemanticsLabel(RegExp(r'^Protein: 78 g left$')), findsOne);
 
       // Each name in Title Case, above its figure and bar.
       final bars = find.byType(LinearProgressIndicator);

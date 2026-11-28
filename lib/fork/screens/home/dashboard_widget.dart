@@ -436,6 +436,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           goal: widget.totalCarbsGoal,
                           color: palette.carbs,
                           identifier: 'home-macro-carbs',
+                          showsEaten: showsEaten,
                           onTap: () => _openNutrientContributions(
                             MacroNutrient.carbs,
                             widget.totalCarbsIntake,
@@ -450,6 +451,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           goal: widget.totalFatsGoal,
                           color: palette.fat,
                           identifier: 'home-macro-fat',
+                          showsEaten: showsEaten,
                           onTap: () => _openNutrientContributions(
                             MacroNutrient.fat,
                             widget.totalFatsIntake,
@@ -464,6 +466,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                           goal: widget.totalProteinsGoal,
                           color: palette.protein,
                           identifier: 'home-macro-protein',
+                          showsEaten: showsEaten,
                           onTap: () => _openNutrientContributions(
                             MacroNutrient.protein,
                             widget.totalProteinsIntake,
@@ -554,14 +557,16 @@ class _StatLine extends StatelessWidget {
   }
 }
 
-/// A macro's column: its name, "51 g left" (or "9 g over") and a bar;
-/// tapping it lists the foods behind it (#1266).
+/// A macro's column: its name, "51 g left" (or "9 g over") and a draining
+/// bar, or with the ring on Eaten "42 of 93 g" and a filling bar; tapping it
+/// lists the foods behind it (#1266).
 class _MacroLeft extends StatelessWidget {
   final String label;
   final double intake;
   final double goal;
   final Color color;
   final String identifier;
+  final bool showsEaten;
   final VoidCallback onTap;
 
   const _MacroLeft({
@@ -570,6 +575,7 @@ class _MacroLeft extends StatelessWidget {
     required this.goal,
     required this.color,
     required this.identifier,
+    required this.showsEaten,
     required this.onTap,
   });
 
@@ -577,16 +583,28 @@ class _MacroLeft extends StatelessWidget {
   Widget build(BuildContext context) {
     final palette = paletteOf(context);
     final textTheme = Theme.of(context).textTheme;
-    final pct = goal <= 0 ? 0.0 : (intake / goal).clamp(0.0, 1.0);
+    // the ring's own fill, so a macro's bar moves the way the ring does
+    final pct = homeRingFill(
+      goal: goal,
+      left: goal - intake,
+      showsEaten: showsEaten,
+    );
     final over = goal > 0 && intake.round() > goal.round();
     final grams = (goal - intake).abs().round();
+    // A target, not a limit: "over" says it, uncoloured, as Trends leaves a
+    // passed target.
+    final strong = TextStyle(
+      fontWeight: FontWeight.w700,
+      color: palette.textStrong,
+    );
     return Semantics(
       identifier: identifier,
       hint: S.of(context).nutrientContributionsHint,
       button: true,
-      label:
-          '$label: ${intake.round()} of ${goal.round()} g, '
-          '$grams g ${over ? 'over' : 'left'}',
+      label: showsEaten
+          ? '$label: ${intake.round()} of ${goal.round()} g eaten'
+                '${over ? ', $grams g over' : ''}'
+          : '$label: $grams g ${over ? 'over' : 'left'}',
       excludeSemantics: true,
       // excludeSemantics drops the InkWell's tap too, as on the ring.
       onTap: onTap,
@@ -606,18 +624,17 @@ class _MacroLeft extends StatelessWidget {
               ),
               Text.rich(
                 TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '$grams g',
-                      // A target, not a limit: "over" says it, uncoloured,
-                      // as Trends leaves a passed target.
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: palette.textStrong,
-                      ),
-                    ),
-                    TextSpan(text: over ? ' over' : ' left'),
-                  ],
+                  children: showsEaten
+                      ? [
+                          TextSpan(text: '${intake.round()}', style: strong),
+                          // "96 of 86 g" and a full bar say over, as spoken; a
+                          // third line made this column taller than the rest
+                          TextSpan(text: ' of ${goal.round()} g'),
+                        ]
+                      : [
+                          TextSpan(text: '$grams g', style: strong),
+                          TextSpan(text: over ? ' over' : ' left'),
+                        ],
                 ),
                 style: textTheme.bodySmall?.copyWith(color: palette.textMuted),
               ),

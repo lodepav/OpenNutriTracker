@@ -279,7 +279,12 @@ class _TrendsOverviewState extends State<TrendsOverview> {
                           state,
                           dates: dates,
                           history: snapshot.data ?? const [],
-                          micros: micros.data,
+                          // A FutureBuilder keeps the old range's data
+                          // while the new range's loads.
+                          micros:
+                              micros.connectionState == ConnectionState.done
+                              ? micros.data
+                              : null,
                           measurements: measured.data,
                           goal: goal.data,
                           frame: frame.data,

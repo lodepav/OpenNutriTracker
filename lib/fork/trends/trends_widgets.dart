@@ -708,10 +708,20 @@ FlTitlesData weekdayTitles(
         return const SizedBox.shrink();
       }
     }
-    return SideTitleWidget(
-      meta: meta,
-      fitInside: SideTitleFitInsideData.fromTitleMeta(meta),
-      child: Text(text, softWrap: false, style: style),
+    // The ends shifted inside by their own width: fl_chart's fitInside
+    // measures a label once, so after a font change it cut the first.
+    final half = wide(text) / 2;
+    final shift = i == 0
+        ? math.max(0.0, half - meta.axisPosition)
+        : i == last
+        ? math.min(0.0, meta.parentAxisSize - meta.axisPosition - half)
+        : 0.0;
+    return Transform.translate(
+      offset: Offset(shift, 0),
+      child: SideTitleWidget(
+        meta: meta,
+        child: Text(text, softWrap: false, style: style),
+      ),
     );
   }
 

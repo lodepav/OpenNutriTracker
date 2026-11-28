@@ -98,8 +98,12 @@ List<Widget> balanceBody(
           ],
           const SizedBox(height: Dimens.spacing8),
           Text(
-            'What you logged less what you burnt, each logged day: '
-            'below the line is a deficit.',
+            'What you logged less what you burnt, '
+            '${switch (daysPerBar(span.length)) {
+              1 => 'each logged day',
+              7 => "a week's average a bar",
+              _ => "a month's average a bar",
+            }}: below the line is a deficit.',
             style: Theme.of(
               context,
             ).textTheme.bodySmall?.copyWith(color: palette.textMuted),

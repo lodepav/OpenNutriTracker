@@ -229,6 +229,13 @@ void main() {
           findsNothing,
         );
         _expectBarsFit(tester);
+        // The caption says what a bar is.
+        expect(
+          find.textContaining(
+            count > 31 ? "a week's average a bar" : 'each logged day',
+          ),
+          findsOneWidget,
+        );
       });
 
       testWidgets('at ${scale}x the calories chart over $count days has an '

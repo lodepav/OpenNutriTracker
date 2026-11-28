@@ -335,6 +335,34 @@ void main() {
     }
   });
 
+  testWidgets('a new range does not show the old range\'s fibre while its '
+      'intakes load', (tester) async {
+    TrendsOverview.loadIntakes = (first, last) async => [
+      _ate(0, fibre: 40),
+    ];
+    final bloc = await pumpTrends(tester, loaded(days: [_logged(0)]));
+    await tester.pumpAndSettle();
+    expect(
+      _tile(tester, 'fibre').spokenLabel,
+      'Fibre, daily average 40 of 30 g',
+    );
+
+    final year = Completer<List<IntakeEntity>>();
+    TrendsOverview.loadIntakes = (first, last) => year.future;
+    bloc.show(loaded(rangeDays: 365, days: [_logged(-1), _logged(0)]));
+    await tester.pump();
+    await tester.pump();
+    // Not the week's 40 over the year's dates.
+    expect(_tile(tester, 'fibre').spokenLabel, 'Fibre, nothing logged');
+
+    year.complete([_ate(-1, fibre: 20), _ate(0, fibre: 40)]);
+    await tester.pumpAndSettle();
+    expect(
+      _tile(tester, 'fibre').spokenLabel,
+      'Fibre, daily average 30 of 30 g',
+    );
+  });
+
   testWidgets('balance and expenditure are spoken in words', (tester) async {
     await _pumpOverview(
       tester,
