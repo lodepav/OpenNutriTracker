@@ -2,6 +2,20 @@
 
 Written by fork/tools/release_notes.dart at each release (D16).
 
+## 1.2.0 · 2026-11-28
+
+Based on OpenNutriTracker 2.7.0.
+
+### New
+
+- a two-sided weight trend for charts, the check-in and the Goal planner
+
+### Fixes and changes
+
+- bundled suite in 3:20 instead of 4:04, and four bundled-only test leaks fixed
+- journeys for yesterday, a copied meal, an offline barcode and a check-in by hand
+- scripted journey check for a common day and the owner's day
+
 ## 1.1.1 · 2026-11-23
 
 Based on OpenNutriTracker 2.7.0.
