@@ -561,6 +561,27 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
               ),
             ),
           );
+          // "10 g over" in words on screen, as Home's macros: the bar alone
+          // only reaches its end past the goal.
+          final overText = goal > 0 && value > goal
+              ? Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: keepUnits('${value - goal} $unit'),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: palette.textStrong,
+                        ),
+                      ),
+                      const TextSpan(text: ' over'),
+                    ],
+                  ),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: palette.textMuted,
+                  ),
+                )
+              : null;
           final bar = ExcludeSemantics(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(3),
@@ -622,6 +643,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                         ),
                         const SizedBox(height: 4),
                         bar,
+                        ?overText,
                       ]
                     : [
                         figure,
@@ -629,6 +651,7 @@ class _TodayAfterAddingState extends State<TodayAfterAdding> {
                         bar,
                         const SizedBox(height: 4),
                         nameText,
+                        ?overText,
                       ],
               ),
             ),

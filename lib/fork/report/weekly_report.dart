@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
+import 'package:opennutritracker/core/domain/usecase/get_tracked_day_usecase.dart';
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/day_boundary_calc.dart';
+import 'package:opennutritracker/core/utils/locator.dart';
+import 'package:opennutritracker/fork/display/week_bars.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart';
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
@@ -144,10 +147,20 @@ List<WeekReport> weeklyReports(
   return [for (final monday in mondays) report(monday, byWeek[monday]!)];
 }
 
+/// The Monday of [day]'s week, where the report reads from: a week the range
+/// cuts is still counted whole.
+DateTime weekStart(DateTime day) =>
+    DateTime(day.year, day.month, day.day - day.weekday + 1);
+
+// Async, so a store not there (a widget test) is a failed future and the
+// card falls back to the range's days.
+Future<List<TrackedDayEntity>> _trackedDays(DateTime from, DateTime to) async =>
+    locator<GetTrackedDayUsecase>().getTrackedDaysByRange(from, to);
+
 /// Seam S40: on Trends, each week of the range: which days were logged,
 /// the mean energy of those days against its goal with a bar and how far
 /// off, and each macro's mean against its goal with a bar in its colour.
-class WeeklyReportCard extends StatelessWidget {
+class WeeklyReportCard extends StatefulWidget {
   final List<TrackedDayEntity> days;
   final int rangeDays;
   final AppPalette palette;
@@ -161,6 +174,9 @@ class WeeklyReportCard extends StatelessWidget {
   /// The explorer's intakes; the intake box in the app.
   final IntakeLoader? load;
 
+  /// The tracked days of the range's whole weeks; the store's in the app.
+  final TrackedDaysLoader loadWeeks;
+
   const WeeklyReportCard({
     super.key,
     required this.days,
@@ -169,16 +185,69 @@ class WeeklyReportCard extends StatelessWidget {
     this.clock,
     this.dayStartMinutes = 0,
     this.load,
+    this.loadWeeks = _trackedDays,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final now = clock;
-    final today = now == null
-        ? DayBoundaryCalc.currentLogicalDayMinutes(dayStartMinutes)
-        : DayBoundaryCalc.logicalDayOfMinutes(now(), dayStartMinutes);
-    final first = DateTime(today.year, today.month, today.day - rangeDays + 1);
-    final weeks = weeklyReports(days, first, today);
+  State<WeeklyReportCard> createState() => _WeeklyReportCardState();
+}
+
+class _WeeklyReportCardState extends State<WeeklyReportCard> {
+  DateTime _today() {
+    final now = widget.clock;
+    return now == null
+        ? DayBoundaryCalc.currentLogicalDayMinutes(widget.dayStartMinutes)
+        : DayBoundaryCalc.logicalDayOfMinutes(now(), widget.dayStartMinutes);
+  }
+
+  DateTime _first(DateTime today) =>
+      DateTime(today.year, today.month, today.day - widget.rangeDays + 1);
+
+  // The range reaches into the oldest week; Trends loads only the range.
+  Future<List<TrackedDayEntity>> _loadWeeks() {
+    final today = _today();
+    return widget.loadWeeks(weekStart(_first(today)), today);
+  }
+
+  late Future<List<TrackedDayEntity>> _weeks = _loadWeeks();
+
+  @override
+  void didUpdateWidget(WeeklyReportCard old) {
+    super.didUpdateWidget(old);
+    if (old.days != widget.days || old.rangeDays != widget.rangeDays) {
+      _weeks = _loadWeeks();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<TrackedDayEntity>>(
+    future: _weeks,
+    builder: (context, snapshot) {
+      final today = _today();
+      final first = _first(today);
+      final whole = snapshot.data;
+      return _card(
+        context,
+        today,
+        first,
+        // Until the whole weeks are read, or when they can't be, the range's
+        // days, a week it cuts counted from the range's first day.
+        whole == null
+            ? weeklyReports(widget.days, first, today)
+            : weeklyReports(whole, weekStart(first), today),
+      );
+    },
+  );
+
+  Widget _card(
+    BuildContext context,
+    DateTime today,
+    DateTime first,
+    List<WeekReport> weeks,
+  ) {
+    final days = widget.days;
+    final palette = widget.palette;
+    final load = widget.load;
     if (weeks.isEmpty) return const SizedBox.shrink();
     final theme = Theme.of(context);
     final thisMonday = DateTime(
@@ -401,7 +470,11 @@ class _Week extends StatelessWidget {
           const SizedBox(height: Dimens.spacing8),
           _Bar(
             share: kcal.goal <= 0 ? 0 : kcal.eaten / kcal.goal,
-            color: standingColor,
+            // the accent, as Home's and the Diary's energy bars draw it
+            color: weekBarColors(
+              theme.colorScheme.primary,
+              palette.surfaceMuted,
+            ).today,
             palette: palette,
             height: 8,
           ),

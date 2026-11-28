@@ -487,6 +487,9 @@ class WeightHistoryChart extends StatelessWidget {
             'Weight over ${n == 1 ? 'a day' : '$n days'}, '
             '${spokenFromTo(digits(spoken.first.y), digits(spoken.last.y), label)}',
         child: LineChart(
+          // A new range draws afresh: the tween morphed the old one's lines
+          // against the new axis.
+          key: ValueKey(n),
           // fl_chart's own 150 ms tween, none with Remove animations on
           duration: motionDuration(context, const Duration(milliseconds: 150)),
           LineChartData(

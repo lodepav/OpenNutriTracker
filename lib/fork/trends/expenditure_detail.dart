@@ -20,6 +20,7 @@ import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show IntakeLoader, intakesBetween, dayStartMinutes;
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
+import 'package:opennutritracker/fork/trends/estimate_span.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
 import 'package:opennutritracker/fork/trends/value_axis.dart';
@@ -39,12 +40,18 @@ List<Widget> expenditureBody(
   IntakeLoader loadIntakes = intakesBetween,
 }) {
   final unit = energyUnit(context);
-  final series = expenditureSeries(history, dates);
+  // Without the days a run cut at the look-back spends settling.
+  final shown = estimateShown(
+    history,
+    weighIns: state.weight,
+    settings: AdaptiveStore.settings.value.expenditure,
+  );
+  final series = expenditureSeries(shown, dates);
   final present = series.whereType<double>();
   // As the table reckons it, so 1W reads as its 7 days; a range older than
   // the estimate changes from the range's first estimate.
   final change =
-      expenditureChanges(history, spans: [dates.length]).single.change ??
+      expenditureChanges(shown, spans: [dates.length]).single.change ??
       (present.length < 2 ? null : present.last - present.first);
   final mean = meanOf(series);
   const gap = SizedBox(height: Dimens.spacing16);
@@ -79,10 +86,10 @@ List<Widget> expenditureBody(
       noData(context, 'Expenditure is estimated from your first weigh-in.'),
     ] else ...[
       gap,
-      ExpenditureChart(history: history, dates: dates),
+      ExpenditureChart(history: shown, dates: dates),
       trendSection(context, 'Changes in expenditure'),
-      ExpenditureChanges(history: history),
-      if (expenditureBreakdown(history) case final b?) ...[
+      ExpenditureChanges(history: shown),
+      if (expenditureBreakdown(shown) case final b?) ...[
         trendSection(context, 'Last ${b.of} days'),
         _Breakdown(breakdown: b),
         const SizedBox(height: Dimens.spacing8),
@@ -121,13 +128,42 @@ AdaptiveService? _locatorService() {
   }
 }
 
-String _day(BuildContext context, DateTime date) => intl.DateFormat.MMMd(
-  Localizations.localeOf(context).toLanguageTag(),
-).format(date);
+/// A date as "Aug 2", with its year when it is not [today]'s.
+String estimateDay(BuildContext context, DateTime date, DateTime today) {
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  return (date.year == today.year
+          ? intl.DateFormat.MMMd(locale)
+          : intl.DateFormat.yMMMd(locale))
+      .format(date);
+}
 
-/// The estimate a day over the window as a line, fitted to its own
-/// values but at least 200 kcal tall, the energy on the right and three
-/// dates under it; a touched day names its logged intake too.
+/// The note on a chart that starts later than its range: where the
+/// estimate it draws begins.
+Widget estimateFromNote(BuildContext context, DateTime from, DateTime today) =>
+    Text(
+      'Estimate from ${estimateDay(context, from, today)}',
+      key: const ValueKey('estimate-from'),
+      style: Theme.of(
+        context,
+      ).textTheme.labelSmall?.copyWith(color: paletteOf(context).textMuted),
+    );
+
+/// The axis dates of [dates]: "Nov 2025" over more than about six months,
+/// "Dec 30, 2025" across a new year, else "Nov 29".
+String Function(DateTime) _axisDay(BuildContext context, List<DateTime> dates) {
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  final format = dates.length > 183
+      ? intl.DateFormat.yMMM(locale)
+      : dates.first.year != dates.last.year
+      ? intl.DateFormat.yMMMd(locale)
+      : intl.DateFormat.MMMd(locale);
+  return format.format;
+}
+
+/// The estimate a day over the window as a line, from the day the
+/// estimate starts when that is later, fitted to its own values but at
+/// least 200 kcal tall, the energy on the right and three dates under it;
+/// a touched day names its logged intake too.
 class ExpenditureChart extends StatelessWidget {
   final List<ExpenditureDay> history;
   final List<DateTime> dates;
@@ -143,6 +179,18 @@ class ExpenditureChart extends StatelessWidget {
     final palette = paletteOf(context);
     final theme = Theme.of(context);
     final accent = chartAccent(context);
+    final from = history.isEmpty
+        ? null
+        : DateTime(
+            history.first.date.year,
+            history.first.date.month,
+            history.first.date.day,
+          );
+    final start = from == null
+        ? 0
+        : this.dates.indexWhere((d) => !d.isBefore(from));
+    final dates = start > 0 ? this.dates.sublist(start) : this.dates;
+    final day = _axisDay(context, dates);
     final kj = usesKj(context);
     double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
     final unit = energyUnit(context);
@@ -193,6 +241,8 @@ class ExpenditureChart extends StatelessWidget {
             child: SizedBox(
               height: 180,
               child: LineChart(
+                // A new range draws afresh, not old days against its axis.
+                key: ValueKey(this.dates.first),
                 duration: motionDuration(
                   context,
                   const Duration(milliseconds: 150),
@@ -266,14 +316,25 @@ class ExpenditureChart extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(_day(context, dates.first)),
+                    Flexible(child: Text(day(dates.first))),
                     if (dates.length >= 3)
-                      Text(_day(context, dates[dates.length ~/ 2])),
-                    Text(_day(context, dates.last)),
+                      Flexible(
+                        child: Text(
+                          day(dates[dates.length ~/ 2]),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    Flexible(
+                      child: Text(day(dates.last), textAlign: TextAlign.end),
+                    ),
                   ],
                 ),
               ),
             ),
+          if (start > 0) ...[
+            const SizedBox(height: Dimens.spacing4),
+            estimateFromNote(context, dates.first, dates.last),
+          ],
           const SizedBox(height: Dimens.spacing8),
           ChartLegend(
             entries: [(label: 'Expenditure', color: accent, line: true)],
@@ -628,6 +689,12 @@ class _LoggingState extends State<_Logging> {
       widget.dates,
       AdaptiveStore.skipped.value,
     );
+    final last = widget.dates.last;
+    final lookBack = DateTime(
+      last.year,
+      last.month,
+      last.day - (estimateLookBackDays - 1),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -653,7 +720,8 @@ class _LoggingState extends State<_Logging> {
           'The estimate counts a day once it has '
           '${energyText(context, minLoggedKcal)} or more logged, unless you '
           'leave it out. The more of the range it counts, the more it can be '
-          'trusted.',
+          'trusted.'
+          '${widget.dates.length > estimateLookBackDays ? ' It looks back $estimateLookBackDays days, so the days before ${estimateDay(context, lookBack, widget.dates.last)} are not counted.' : ''}',
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted),

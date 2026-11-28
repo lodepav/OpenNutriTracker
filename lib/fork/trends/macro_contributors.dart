@@ -71,7 +71,9 @@ class _MacroDaysAndFoodsState extends State<MacroDaysAndFoods> {
           // The chart's own hint is the spoken one.
           child: ExcludeSemantics(
             child: Text(
-              narrowDaySlots(box.maxWidth, widget.dates.length)
+              // a week's or a month's bar takes no tap
+              daysPerBar(widget.dates.length) > 1 ||
+                      narrowDaySlots(box.maxWidth, widget.dates.length)
                   ? 'Pick a day for its foods.'
                   : 'Tap a day for its foods.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -248,6 +250,17 @@ class TopFoods extends StatelessWidget {
         : FoodShare.of(intakes!, metric);
     final total = shares.fold(0.0, (s, f) => s + f.value);
     final top = shares.isEmpty ? 0.0 : shares.first.value;
+    String amountOf(FoodShare share) => metric == FoodsMetric.energy
+        ? energyText(context, share.value)
+        : share.value < 0.5
+        ? '<1 g'
+        : '${share.value.round()} g';
+    String? percentOf(FoodShare share) =>
+        total > 0 ? '${(100 * share.value / total).round()}%' : null;
+    final trailingWidth = foodShareTrailingWidth(context, [
+      for (final share in shares.take(topFoodsShown))
+        (amountOf(share), percentOf(share)),
+    ]);
     return AppCard(
       padding: const EdgeInsets.symmetric(vertical: Dimens.spacing8),
       child: Column(
@@ -305,14 +318,9 @@ class TopFoods extends StatelessWidget {
               if (i > 0) Divider(height: 1, color: palette.surfaceMuted),
               FoodShareRow(
                 share: share,
-                amount: metric == FoodsMetric.energy
-                    ? energyText(context, share.value)
-                    : share.value < 0.5
-                    ? '<1 g'
-                    : '${share.value.round()} g',
-                percent: total > 0
-                    ? '${(100 * share.value / total).round()}%'
-                    : null,
+                amount: amountOf(share),
+                percent: percentOf(share),
+                trailingWidth: trailingWidth,
                 fraction: top > 0 ? share.value / top : 0,
                 color: color,
                 palette: palette,

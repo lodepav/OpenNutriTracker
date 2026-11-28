@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/fork/units/amount_text.dart';
 import 'package:opennutritracker/fork/layout/width_cap.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
-import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -32,6 +31,9 @@ import 'package:opennutritracker/fork/goal/goal_you_tile.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
 import 'package:opennutritracker/fork/report/nutrient_explorer.dart'
     show IntakeLoader, allTrackedDays, intakesBetween;
+import 'package:opennutritracker/fork/trends/estimate_span.dart';
+import 'package:opennutritracker/fork/trends/expenditure_detail.dart'
+    show estimateDay;
 import 'package:opennutritracker/fork/trends/nutrient_trends.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -463,6 +465,8 @@ List<TrendTile> trendTiles(
     required DaySeries spark,
     required Color sparkColor,
     Color? sparkNegativeColor,
+    double? sparkGoal,
+    String Function(double value)? sparkScale,
     bool bars = true,
     required String spoken,
     String? note,
@@ -477,6 +481,8 @@ List<TrendTile> trendTiles(
       values: spark,
       color: sparkColor,
       negativeColor: sparkNegativeColor,
+      goal: sparkGoal,
+      scaleText: sparkScale,
       bars: bars,
     ),
     onTap: () => open(m),
@@ -500,16 +506,27 @@ List<TrendTile> trendTiles(
   final wu = state.bodyWeightUnit;
   final wLabel = weightUnitLabel(context, wu);
 
-  final spent = expenditureSeries(history, dates);
+  // Without the days a run cut at the look-back spends settling.
+  final estimate = estimateShown(
+    history,
+    weighIns: state.weight,
+    settings: AdaptiveStore.settings.value.expenditure,
+  );
+  final spent = expenditureSeries(estimate, dates);
   final spentNow = spent.whereType<double>().lastOrNull;
-  final balance = balanceSeries(history, dates);
+  // Both from the day the estimate starts: before it the line would start
+  // late and the bars be grey stubs beside "logged".
+  final spentLine = fromDay(
+    expenditureSeries(estimate, dates, settledOnly: true),
+    dates,
+    estimate.firstOrNull?.date,
+  );
+  final balance = balanceSeries(estimate, dates);
   final balanceMean = meanOf(balance);
-  // The days before the estimate began are no grey stubs beside "logged".
-  final balanceBars = fromDay(balance, dates, history.firstOrNull?.date);
-  final balanceFrom = switch (balanceBars.from) {
+  final balanceBars = fromDay(balance, dates, estimate.firstOrNull?.date);
+  final estimateFrom = switch (balanceBars.from) {
     null => null,
-    final d =>
-      'from ${intl.DateFormat.MMMd(Localizations.localeOf(context).toLanguageTag()).format(d)}',
+    final d => 'from ${estimateDay(context, d, state.logicalToday)}',
   };
 
   TrendTile macroTile(TrendMetric m, Color color) {
@@ -525,6 +542,7 @@ List<TrendTile> trendTiles(
       valueColor: color,
       spark: series,
       sparkColor: color,
+      sparkGoal: goal,
       spoken: averageSpoken(
         m,
         mean == null ? null : '${mean.round()}',
@@ -560,6 +578,7 @@ List<TrendTile> trendTiles(
           : '/ ${nutrient.text(goal)} ${nutrient.unit}',
       spark: micro?.series ?? [for (final _ in dates) null],
       sparkColor: color,
+      sparkGoal: goal,
       note: over ? 'over limit' : null,
       spoken: over ? '$spoken, over limit' : spoken,
     );
@@ -589,6 +608,7 @@ List<TrendTile> trendTiles(
           : '/ ${energyValue(context, energyGoal)} $unit',
       spark: energy,
       sparkColor: chartAccent(context),
+      sparkGoal: energyGoal,
       spoken: averageSpoken(
         TrendMetric.calories,
         energyMean == null ? null : '${energyValue(context, energyMean)}',
@@ -610,6 +630,7 @@ List<TrendTile> trendTiles(
       spark: weight.trend,
       sparkColor: chartAccent(context),
       bars: false,
+      sparkScale: (kg) => weightIn(wu, kg).toStringAsFixed(1),
       spoken: weight.nowKg == null
           ? 'Weight trend, no weigh-ins'
           : 'Weight trend, '
@@ -624,12 +645,16 @@ List<TrendTile> trendTiles(
       TrendMetric.expenditure,
       value: spentNow == null ? '–' : '${energyValue(context, spentNow)}',
       suffix: spentNow == null ? 'after a weigh-in' : '$unit\u00A0a\u00A0day',
-      spark: expenditureSeries(history, dates, settledOnly: true),
+      spark: spentLine.values,
       sparkColor: chartAccent(context),
       bars: false,
+      sparkScale: (kcal) => '${energyValue(context, kcal)}',
+      note: estimateFrom,
+      noteMuted: true,
       spoken: spentNow == null
           ? 'Expenditure, after a weigh-in'
-          : 'Expenditure, ${energyValue(context, spentNow)} $unit a day',
+          : 'Expenditure, ${energyValue(context, spentNow)} $unit a day'
+                '${estimateFrom == null ? '' : ', $estimateFrom'}',
     ),
     tile(
       TrendMetric.balance,
@@ -638,10 +663,10 @@ List<TrendTile> trendTiles(
           : signedText(energyValue(context, balanceMean).toDouble()),
       suffix: '$unit\u00A0a\u00A0day',
       spark: balanceBars.values,
-      // As the page: a surplus in fat's colour, a deficit in the accent.
-      sparkColor: palette.fat,
+      // As the page: a surplus in muted ink, a deficit in the accent.
+      sparkColor: chartSurplus(context),
       sparkNegativeColor: chartAccent(context),
-      note: balanceFrom,
+      note: [?estimateFrom, 'up: surplus · down: deficit'].join(' · '),
       noteMuted: true,
       spoken:
           switch (balanceShown) {
@@ -651,7 +676,7 @@ List<TrendTile> trendTiles(
               'Energy balance, ${b.abs()} $unit a day '
                   '${b < 0 ? 'under' : 'over'}',
           } +
-          (balanceFrom == null ? '' : ', $balanceFrom'),
+          (estimateFrom == null ? '' : ', $estimateFrom'),
     ),
     ...inMacroOrder(
       carbs: macroTile(TrendMetric.carbs, palette.carbs),

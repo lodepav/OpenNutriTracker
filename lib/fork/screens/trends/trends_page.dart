@@ -233,6 +233,8 @@ class _WaterTrendCard extends StatelessWidget {
               child: SizedBox(
                 height: 140,
                 child: LineChart(
+                  // A new range draws afresh, not old days against its axis.
+                  key: ValueKey(rangeDays),
                   duration: motionDuration(
                     context,
                     const Duration(milliseconds: 150),
@@ -378,6 +380,8 @@ class _WeightCard extends StatelessWidget {
             ),
           const SizedBox(height: Dimens.spacing12),
           WeightTrendChart(
+            // A new range draws afresh, not old days against its axis.
+            key: ValueKey(rangeDays),
             entries: entries,
             bodyWeightUnit: bodyWeightUnit,
             targetWeightKg: targetWeightKg,

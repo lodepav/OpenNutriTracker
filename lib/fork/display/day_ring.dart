@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/fork/display/contrast.dart';
+import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// A day of the Diary's calendar (seam S118, MacroFactor's week strip):
 /// its date inside a ring that fills with the energy eaten against the
@@ -63,7 +64,11 @@ class DayRing extends StatelessWidget {
         child: CustomPaint(
           painter: _RingPainter(
             fill: fill(trackedDay),
-            track: palette.surfaceMuted,
+            // a day with a fill gets a track that reads, so the gap left to
+            // the goal shows: 80% and 94% looked alike on a faint track
+            track: fill(trackedDay) > 0
+                ? palette.textMuted.withValues(alpha: 0.35)
+                : palette.surfaceMuted,
             color:
                 trackedDay?.getCalendarDayRatingColor(context) ??
                 chartSafe(scheme.primary, palette.surfaceMuted),
@@ -112,7 +117,8 @@ class _RingPainter extends CustomPainter {
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.round;
+      // butt, not round: round caps ate into the gap left to the goal
+      ..strokeCap = StrokeCap.butt;
     canvas.drawOval(ring, paint..color = track);
     if (fill > 0) {
       canvas.drawArc(
@@ -131,4 +137,34 @@ class _RingPainter extends CustomPainter {
       old.track != track ||
       old.color != color ||
       old.filled != filled;
+}
+
+/// What a day ring means, under the month's title: the ring's share and the
+/// rating colour's red (upstream's rule: [TrackedDayEntity]'s 500 over or
+/// 1000 under), which only TalkBack said before.
+class DayRingKey extends StatelessWidget {
+  const DayRingKey({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final over = energyValue(
+      context,
+      TrackedDayEntity.maxKcalDifferenceOverGoal.toDouble(),
+    );
+    final under = energyValue(
+      context,
+      TrackedDayEntity.maxKcalDifferenceUnderGoal.toDouble(),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        'Ring: share of energy goal · Red: $over+ over or $under+ '
+        '${energyUnit(context)} under',
+        textAlign: TextAlign.center,
+        style: Theme.of(
+          context,
+        ).textTheme.bodySmall?.copyWith(color: paletteOf(context).textMuted),
+      ),
+    );
+  }
 }

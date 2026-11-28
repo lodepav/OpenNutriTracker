@@ -330,8 +330,11 @@ void main() {
       reason: 'today is the window\'s last day',
     );
 
+    final before = tester.state(find.byType(LineChart));
     await tester.tap(pill('90 d'));
     await tester.pumpAndSettle();
+    // A fresh chart: the old range's lines are not tweened onto the new.
+    expect(tester.state(find.byType(LineChart)), isNot(same(before)));
     expect(
       tester.getSemantics(pill('90 d')),
       isSemantics(isSelected: true, isButton: true),

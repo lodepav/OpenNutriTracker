@@ -7,6 +7,10 @@ import 'package:opennutritracker/core/styles/dimens.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/adaptive/adaptive_store.dart';
+import 'package:opennutritracker/fork/trends/estimate_span.dart';
+import 'package:opennutritracker/fork/trends/expenditure_detail.dart'
+    show estimateFromNote;
 import 'package:opennutritracker/fork/trends/detail_stats.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_detail.dart';
@@ -16,7 +20,8 @@ import 'package:opennutritracker/fork/units/energy_text.dart';
 
 /// The Energy balance page: the average and total of what was eaten less
 /// what was burnt, each logged day's bar, how the days went, and the weight
-/// change the balance makes against the trend's.
+/// change the balance makes against the trend's, all from the day the
+/// estimate starts when that is later than the range.
 List<Widget> balanceBody(
   BuildContext context,
   TrendsLoaded state,
@@ -29,9 +34,24 @@ List<Widget> balanceBody(
   final kj = usesKj(context);
   double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
   final unit = energyUnit(context);
-  final series = balanceSeries(history, dates);
+  final estimate = estimateShown(
+    history,
+    weighIns: state.weight,
+    settings: AdaptiveStore.settings.value.expenditure,
+  );
+  // The chart and both weight tiles over the days with an estimate.
+  final first = estimate.firstOrNull?.date;
+  final since = [
+    for (final d in dates)
+      if (first == null ||
+          !d.isBefore(DateTime(first.year, first.month, first.day)))
+        d,
+  ];
+  final span = since.isEmpty ? dates : since;
+  final from = span.length < dates.length ? span.first : null;
+  final series = balanceSeries(estimate, span);
   final mean = meanOf(series);
-  final sum = balanceSummary(history, dates, today: state.logicalToday);
+  final sum = balanceSummary(estimate, span, today: state.logicalToday);
   String signed(double kcal) =>
       signedText(energyValue(context, kcal).toDouble());
   return [
@@ -48,7 +68,7 @@ List<Widget> balanceBody(
           unit: unit,
         ),
         (
-          label: 'Logged',
+          label: 'Days with an estimate',
           value: '${sum?.logged ?? 0}',
           unit: sum?.logged == 1 ? 'day' : 'days',
         ),
@@ -63,13 +83,19 @@ List<Widget> balanceBody(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DailyBarChart(
+            // A new range draws afresh, not old days against its axis.
+            key: ValueKey(dates.first),
             values: [for (final v in series) v == null ? null : shown(v)],
-            dates: dates,
-            color: palette.fat,
+            dates: span,
+            color: chartSurplus(context),
             negativeColor: chartAccent(context),
             unit: unit,
             label: 'Energy balance chart',
           ),
+          if (from != null) ...[
+            const SizedBox(height: Dimens.spacing4),
+            estimateFromNote(context, from, span.last),
+          ],
           const SizedBox(height: Dimens.spacing8),
           Text(
             'What you logged less what you burnt, each logged day: '
@@ -97,7 +123,7 @@ List<Widget> balanceBody(
         ],
       ),
       trendSection(context, 'What it means for weight'),
-      _WeightTiles(state: state, dates: dates, meanKcal: mean),
+      _WeightTiles(state: state, dates: span, meanKcal: mean),
       const SizedBox(height: Dimens.spacing8),
       Text(
         'The two part ways while water moves the scale, and while the '

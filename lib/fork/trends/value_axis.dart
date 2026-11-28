@@ -34,15 +34,7 @@ double niceStep(double raw) {
   var step = niceStep((max - min) / 3);
   var ticks = at(step);
   if (ticks.length < 3) {
-    // Down a round step: 5, 2, 1. The slack keeps log10(1000) from flooring to 2.
-    final p = math
-        .pow(10, (math.log(step) / math.ln10 + 1e-9).floor())
-        .toDouble();
-    final finer = switch ((step / p).round()) {
-      1 => p / 2,
-      2 => p,
-      _ => 2 * p,
-    };
+    final finer = _finerStep(step);
     if (at(finer).length <= 5) {
       step = finer;
       ticks = at(step);
@@ -54,6 +46,66 @@ double niceStep(double raw) {
     ticks = at(step);
   }
   return (min: min, max: max, step: step, ticks: ticks);
+}
+
+/// A round step down from [step]: 5, 2, 1.
+double _finerStep(double step) {
+  // The slack keeps log10(1000) from flooring to 2.
+  final p = math
+      .pow(10, (math.log(step) / math.ln10 + 1e-9).floor())
+      .toDouble();
+  return switch ((step / p).round()) {
+    1 => p / 2,
+    2 => p,
+    _ => 2 * p,
+  };
+}
+
+/// [step], or a round step under it, so the axis from [min] to [max] has
+/// at least two ticks inside it: a flat week gave a single "87.0".
+double atLeastTwoTicks(double min, double max, double step) {
+  if (!(max > min) || !(step > 0)) return step;
+  // Inside the ends: a chart that leaves its ends unlabelled.
+  int count(double s) => (max / s - 1e-9).ceil() - (min / s + 1e-9).floor() - 1;
+  while (count(step) < 2) {
+    step = _finerStep(step);
+  }
+  return step;
+}
+
+/// The whole-day interval of a date axis from day 0 to day [last], at
+/// [dayWidth] a day, whose labels, [room] wide each, neither crowd nor run
+/// into the label of [last], which a chart adds at its end: [last] falls
+/// on the interval or a full label away from it.
+int dateInterval(int last, double dayWidth, double room) {
+  if (last <= 0 || !(dayWidth > 0)) return 1;
+  final least = math.max(1, (room / dayWidth).ceil());
+  for (var step = least; step < last; step++) {
+    final rest = last % step;
+    if (rest == 0 || rest >= least) return step;
+  }
+  return last;
+}
+
+/// The room a date label needs on an axis: the widest of [labels] at the
+/// user's font in [style], and a gap.
+double dateLabelRoom(
+  BuildContext context,
+  TextStyle? style,
+  Iterable<String> labels,
+) {
+  var width = 0.0;
+  for (final label in labels) {
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    width = math.max(width, painter.width);
+    painter.dispose();
+  }
+  return width + 12;
 }
 
 /// [y], a tick of [step], as the axis shows it: as many decimals as the

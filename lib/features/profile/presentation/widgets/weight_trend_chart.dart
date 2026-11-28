@@ -23,6 +23,9 @@ import 'package:opennutritracker/fork/display/contrast.dart';
 // [fork] S271 weight-chart-motion
 import 'package:opennutritracker/fork/display/motion.dart';
 // [/fork]
+// [fork] S608 weight-chart-axes
+import 'package:opennutritracker/fork/trends/value_axis.dart';
+// [/fork]
 
 /// Smoothed weight trend line shared by the weight-history screen and the
 /// Trends view, so both render the same chart — dated axis, a dashed
@@ -254,9 +257,27 @@ class WeightTrendChart extends StatelessWidget {
             child: ExcludeSemantics(
               child:
       // [/fork]
+      // [fork] S608 weight-chart-axes: as many dates as fit the width at
+      // the user's font, none running into the last ("Nov 19Nov 28")
+      LayoutBuilder(builder: (context, box) {
+        final last = windowDays - 1;
+        final dateStep = dateInterval(
+          last,
+          (box.maxWidth - 40 * textScale) / last,
+          dateLabelRoom(context, theme.textTheme.labelSmall, [
+            dateFormat.format(windowStart),
+            dateFormat.format(today),
+          ]),
+        ).toDouble();
+        return
+      // [/fork]
       SizedBox(
         height: chartHeight,
         child: LineChart(
+          // [fork] S608 weight-chart-axes: a new range draws afresh; the
+          // tween morphed the old range's lines against the new axis
+          key: ValueKey(windowDays),
+          // [/fork]
           // [fork] S271 weight-chart-motion: no movement while animations
           // are off
           duration: motionDuration(context, const Duration(milliseconds: 150)),
@@ -289,7 +310,17 @@ class WeightTrendChart extends StatelessWidget {
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: 40 * textScale, // [fork] S96
-                  interval: yAxisInterval,
+                  // [fork] S608 weight-chart-axes: a week that moves had one
+                  // label; a line that doesn't move keeps its one (#1445)
+                  // interval: yAxisInterval,
+                  interval: maxY > minY
+                      ? atLeastTwoTicks(
+                          minY - yPadding,
+                          maxY + yPadding,
+                          yAxisInterval,
+                        )
+                      : yAxisInterval,
+                  // [/fork]
                   // The padded bounds sit off the tick grid, and fl_chart
                   // labels them by default: 62–65.8 kg pads up to 66.37,
                   // which prints "66" right beside the regular tick at 66.
@@ -305,7 +336,10 @@ class WeightTrendChart extends StatelessWidget {
                 sideTitles: SideTitles(
                   showTitles: true,
                   reservedSize: _bottomTitlesReservedSize * textScale, // [fork] S96
-                  interval: labelInterval,
+                  // [fork] S608 weight-chart-axes
+                  // interval: labelInterval,
+                  interval: box.maxWidth.isFinite ? dateStep : labelInterval,
+                  // [/fork]
                   getTitlesWidget: (value, meta) {
                     final day = dayAt(value.toInt());
                     return Padding(
@@ -373,7 +407,10 @@ class WeightTrendChart extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      // [fork] S608 weight-chart-axes: the SizedBox is the builder's return
+      // ),
+      );}),
+      // [/fork]
       // [fork] S96 chart-touch
             ),
           ),

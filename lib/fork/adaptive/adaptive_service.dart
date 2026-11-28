@@ -29,7 +29,7 @@ final _log = Logger('AdaptiveService');
 
 /// How far back a check-in reads: long enough for the estimate to settle
 /// from the prior (fork/research/phase3-simulation.md).
-const _historyDays = 120;
+const estimateLookBackDays = 120;
 
 /// How far back a day that looks partly logged is asked about (D65): the
 /// days the estimate's window still reads, at its longest.
@@ -394,14 +394,14 @@ class AdaptiveService {
       AdaptiveStore.settings.value.expenditure;
 
   /// The days a check-in reads, from the first weigh-in in the last
-  /// [_historyDays] (today when there is none) to today.
+  /// [estimateLookBackDays] (today when there is none) to today.
   Future<({DateTime first, List<AdaptiveDay> days, bool activityUnreadable})>
   _history() async {
     final today = _today();
     final start = DateTime(
       today.year,
       today.month,
-      today.day - (_historyDays - 1),
+      today.day - (estimateLookBackDays - 1),
     );
     final weighIns = {
       for (final entry in await _weights.getAllEntries())

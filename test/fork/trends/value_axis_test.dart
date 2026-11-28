@@ -112,6 +112,66 @@ void main() {
     });
   });
 
+  group('atLeastTwoTicks', () {
+    test("a flat week's half-kilo step goes down to 0.2", () {
+      // 86.75 to 87.35: 0.5 lands only on 87.0.
+      expect(atLeastTwoTicks(86.75, 87.35, 0.5), 0.2);
+    });
+
+    test('a step that already labels two is kept', () {
+      expect(atLeastTwoTicks(61.88, 62.92, 0.5), 0.5);
+      expect(atLeastTwoTicks(77, 103, 5), 5);
+    });
+
+    test('a tiny range goes down past one step', () {
+      // The weight chart pads by at least 0.1 a side, so 0.1 always does.
+      expect(atLeastTwoTicks(86.92, 87.13, 0.5), 0.1);
+    });
+
+    test('an empty range does not loop', () {
+      expect(atLeastTwoTicks(5, 5, 0.5), 0.5);
+    });
+  });
+
+  group('dateInterval', () {
+    /// The days a chart labels: each interval from 0, and [last].
+    List<int> labelled(int last, int step) => {
+      for (var d = 0; d <= last; d += step) d,
+      last,
+    }.toList();
+
+    test('a week with room labels every other day', () {
+      expect(labelled(6, dateInterval(6, 50, 58)), [0, 2, 4, 6]);
+    });
+
+    test('a month at 200% drops the label that ran into the last', () {
+      // 300 px over 29 days, labels 108 px: 0, 11, 22 put 22 by 29.
+      final step = dateInterval(29, 300 / 29, 108);
+      expect(labelled(29, step), [0, 15, 29]);
+    });
+
+    test('no two labels are closer than a label', () {
+      for (final last in [6, 29, 89, 179, 364]) {
+        for (final room in [40.0, 70.0, 120.0]) {
+          final dayWidth = 300 / last;
+          final days = labelled(last, dateInterval(last, dayWidth, room));
+          for (var i = 1; i < days.length; i++) {
+            expect(
+              (days[i] - days[i - 1]) * dayWidth,
+              greaterThanOrEqualTo(room),
+              reason: '$days over $last days, $room px',
+            );
+          }
+        }
+      }
+    });
+
+    test('too narrow for more: only the ends', () {
+      expect(dateInterval(6, 10, 200), 6);
+      expect(dateInterval(0, 10, 50), 1);
+    });
+  });
+
   test('labels have a minus sign and no -0', () {
     expect(axisLabel(-200, 100), '−200');
     expect(axisLabel(-1e-12, 0.5), '0');
@@ -135,7 +195,12 @@ void main() {
                   for (final (i, d) in dates.indexed)
                     ExpenditureDay(
                       date: d,
-                      expenditureKcal: i.isEven ? 2800 : 2300,
+                      // Over a month bars are weeks to the last day, so
+                      // the swing is by week.
+                      expenditureKcal:
+                          (count > 31 ? (count - 1 - i) ~/ 7 : i).isEven
+                          ? 2800
+                          : 2300,
                       intakeKcal: 2500,
                       settled: true,
                     ),

@@ -23,6 +23,7 @@ import 'package:opennutritracker/fork/report/chart_touch.dart';
 import 'package:opennutritracker/fork/trends/detail_widgets.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
+import 'package:opennutritracker/fork/trends/value_axis.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 import 'package:opennutritracker/fork/display/chart_semantics.dart';
 
@@ -714,6 +715,18 @@ class _GoalChart extends StatelessWidget {
     );
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final label = goalWeightLabel(unit);
+    // The last day a line reaches, dated, as "When you get there" is.
+    final lastDay = [
+      ...plan.map((s) => s.x),
+      ...projection.map((s) => s.x),
+      todayX,
+    ].reduce(math.max).round();
+    String date(int day) => format.format(DateUtils.addDaysToDate(origin, day));
+    final dateStyle = theme.textTheme.labelSmall?.copyWith(
+      color: palette.textMuted,
+    );
+    final room = dateLabelRoom(context, dateStyle, [date(0), date(lastDay)]);
+    int? dateStep;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -764,37 +777,45 @@ class _GoalChart extends StatelessWidget {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 24 * textScale,
-                      interval: math.max(1, endX / 3),
-                      // The last date would run past the edge.
-                      getTitlesWidget: (value, meta) => value == meta.max
-                          ? const SizedBox.shrink()
-                          : Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                format.format(
-                                  DateUtils.addDaysToDate(
-                                    origin,
-                                    value.round(),
-                                  ),
-                                ),
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: palette.textMuted,
-                                ),
-                              ),
-                            ),
+                      interval: 1,
+                      // Evenly from the start, and the day the last line
+                      // ends, kept inside the chart.
+                      getTitlesWidget: (value, meta) {
+                        final day = value.round();
+                        final dayWidth = meta.parentAxisSize / meta.max;
+                        // Kept inside, the last date moves in by this much.
+                        final shift = math.max(
+                          0.0,
+                          room / 2 - (meta.max - lastDay) * dayWidth,
+                        );
+                        final step = dateStep ??= dateInterval(
+                          lastDay,
+                          dayWidth,
+                          room + shift,
+                        );
+                        if (day > lastDay ||
+                            (day % step != 0 && day != lastDay)) {
+                          return const SizedBox.shrink();
+                        }
+                        return SideTitleWidget(
+                          meta: meta,
+                          space: 6,
+                          // The first runs into the value axis' room.
+                          fitInside: day == 0
+                              ? SideTitleFitInsideData.disable()
+                              : SideTitleFitInsideData.fromTitleMeta(meta),
+                          child: Text(
+                            date(day),
+                            softWrap: false,
+                            style: dateStyle,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
-                extraLinesData: ExtraLinesData(
-                  horizontalLines: [
-                    HorizontalLine(
-                      y: y(p.targetKg),
-                      color: line,
-                      strokeWidth: 1.4,
-                      dashArray: const [6, 4],
-                    ),
-                  ],
-                ),
+                // Muted, as every goal line, so it is not the projection.
+                extraLinesData: goalLine(context, y(p.targetKg)),
                 lineBarsData: [
                   LineChartBarData(
                     spots: plan,
@@ -833,13 +854,96 @@ class _GoalChart extends StatelessWidget {
           ),
         ),
         const SizedBox(height: Dimens.spacing8),
-        Text(
-          'Solid line: your trend. Fine dots: the plan'
-          '${p.replanned ? ' since you changed the pace' : ''}. Dashes from '
-          'today: at your recent pace. Level dashes: the target.',
-          style: theme.textTheme.bodySmall?.copyWith(color: palette.textMuted),
+        Wrap(
+          spacing: Dimens.spacing12,
+          runSpacing: Dimens.spacing4,
+          children: [
+            _LineKey('Your trend', color: line, width: 3),
+            _LineKey(
+              p.replanned ? 'Plan since you changed the pace' : 'Plan',
+              color: palette.textMuted,
+              width: 1.5,
+              dashes: const [3, 4],
+            ),
+            if (projection.isNotEmpty)
+              _LineKey(
+                'At your recent pace',
+                color: line,
+                width: 2,
+                dashes: const [6, 5],
+              ),
+            _LineKey(
+              'Target',
+              color: palette.textMuted,
+              width: 1.2,
+              dashes: const [6, 4],
+            ),
+          ],
         ),
       ],
     );
   }
+}
+
+/// A line of the goal chart's key: a short stretch of it, as drawn, before
+/// its [label].
+class _LineKey extends StatelessWidget {
+  final String label;
+  final Color color;
+  final double width;
+  final List<double>? dashes;
+
+  const _LineKey(
+    this.label, {
+    required this.color,
+    required this.width,
+    this.dashes,
+  });
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      CustomPaint(
+        size: const Size(24, 8),
+        painter: _LinePainter(color, width, dashes),
+      ),
+      const SizedBox(width: 6),
+      Flexible(
+        child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ),
+    ],
+  );
+}
+
+class _LinePainter extends CustomPainter {
+  final Color color;
+  final double width;
+  final List<double>? dashes;
+
+  _LinePainter(this.color, this.width, this.dashes);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = width;
+    final y = size.height / 2;
+    final d = dashes;
+    if (d == null) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+      return;
+    }
+    for (var x = 0.0; x < size.width; x += d[0] + d[1]) {
+      canvas.drawLine(
+        Offset(x, y),
+        Offset(math.min(x + d[0], size.width), y),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LinePainter old) =>
+      old.color != color || old.width != width || old.dashes != dashes;
 }

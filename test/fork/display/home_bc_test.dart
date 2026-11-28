@@ -222,10 +222,14 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.textContaining('79.5'), findsOne);
+      // The trend, and the line's high and low beside it.
+      expect(find.textContaining('79.5'), findsNWidgets(3));
       expect(find.textContaining('81 kg'), findsNothing);
-      // Its own line under the trend, no "·" to join them.
-      expect(find.text('0\u00A0kg\u00A0in\u00A07\u00A0days'), findsOne);
+      // Its own line under the trend, with the line's span.
+      expect(
+        find.text('0\u00A0kg\u00A0in\u00A07\u00A0days · 15-day\u00A0line'),
+        findsOne,
+      );
       expect(find.textContaining('2712 ${keepUnits('kcal a day')}'), findsOne);
       expect(find.byType(Sparkline), findsNWidgets(2));
     });

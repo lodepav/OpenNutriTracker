@@ -379,8 +379,9 @@ void main() {
     final bars = (balance.chart as Sparkline).values;
     expect(bars, hasLength(10));
     expect(bars.first, isNotNull);
-    expect(balance.note, 'from ${DateFormat.MMMd('en').format(day(-9))}');
-    expect(balance.spokenLabel, endsWith(', ${balance.note}'));
+    final from = 'from ${DateFormat.MMMd('en').format(day(-9))}';
+    expect(balance.note, '$from · up: surplus · down: deficit');
+    expect(balance.spokenLabel, endsWith(', $from'));
     // A fact, muted as the span line, not the amber of "over limit".
     final noteText = tester.widget<Text>(
       find.descendant(
@@ -397,11 +398,98 @@ void main() {
 
     final spent = _tile(tester, 'expenditure');
     final line = (spent.chart as Sparkline).values;
-    expect(line.sublist(line.length - 10), [
+    // From the day the estimate starts, as the balance's bars.
+    expect(spent.note, from);
+    expect(line, [
       for (var i = -9; i <= 0; i++) i >= -2 ? 3000 + i * 10.0 : null,
     ]);
     // The headline is the estimate now, as before.
     expect(spent.value, '3000');
+  });
+
+  testWidgets('at 1Y a run cut at the look-back starts once settled', (
+    tester,
+  ) async {
+    // 120 days of estimate, a weigh-in long before them: the first 29
+    // are the formula settling again.
+    await _pumpOverview(
+      tester,
+      loaded(
+        rangeDays: 365,
+        weight: [WeightLogEntity(date: day(-300), weightKg: 80)],
+      ),
+      history: [
+        for (var i = -119; i <= 0; i++)
+          ExpenditureDay(
+            date: day(i),
+            expenditureKcal: i < -90 ? 3300 : 3000,
+            intakeKcal: 2500,
+            settled: true,
+          ),
+      ],
+    );
+    final from = 'from ${DateFormat.MMMd('en').format(day(-90))}';
+    final spent = _tile(tester, 'expenditure');
+    expect((spent.chart as Sparkline).values, hasLength(91));
+    expect((spent.chart as Sparkline).values.first, 3000);
+    expect(spent.note, from);
+    final balance = _tile(tester, 'balance');
+    expect((balance.chart as Sparkline).values, hasLength(91));
+    expect(balance.value, '−500');
+  });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('the weight and expenditure lines print their high and low '
+        'in the unit, at ${scale}x on a 360 dp phone', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 3;
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpOverview(
+        tester,
+        loaded(
+          weight: [
+            for (var i = -6; i <= 0; i++)
+              WeightLogEntity(date: day(i), weightKg: 288.8 - i),
+          ],
+        ),
+        history: [
+          for (var i = -6; i <= 0; i++)
+            ExpenditureDay(
+              date: day(i),
+              expenditureKcal: 3000 + i * 100.0,
+              settled: true,
+            ),
+        ],
+      );
+      Finder inTile(String metric, String text) => find.descendant(
+        of: find.byKey(ValueKey('trends-tile-$metric')),
+        matching: find.text(text),
+      );
+      // The smoothed trend's high and low, to a tenth.
+      expect(
+        find.descendant(
+          of: find.byType(Sparkline),
+          matching: find.byWidgetPredicate(
+            (w) => w is Text && RegExp(r'^\d+\.\d$').hasMatch(w.data ?? ''),
+          ),
+        ),
+        findsNWidgets(2),
+      );
+      expect(inTile('expenditure', '2400'), findsOneWidget);
+      // No overflow was thrown laying them out.
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('the intake tiles pass their day goal to the sparkline', (
+    tester,
+  ) async {
+    await _pumpOverview(tester, loaded(days: [_logged(-1), _logged(0)]));
+    expect((_tile(tester, 'calories').chart as Sparkline).goal, 2925);
+    expect((_tile(tester, 'protein').chart as Sparkline).goal, 110);
+    expect((_tile(tester, 'weight').chart as Sparkline).goal, isNull);
   });
 
   testWidgets('a week with an estimate throughout keeps an unlogged first '
@@ -423,7 +511,7 @@ void main() {
     final bars = (balance.chart as Sparkline).values;
     expect(bars, hasLength(7));
     expect(bars.first, isNull);
-    expect(balance.note, isNull);
+    expect(balance.note, 'up: surplus · down: deficit');
   });
 
   testWidgets('a saved order shows the tiles it does not list', (tester) async {

@@ -251,6 +251,31 @@ void main() {
     semantics.dispose();
   });
 
+  testWidgets('a total past its goal says how far over, as Home does', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        TodayAfterAdding(
+          day: DateTime(2026, 10, 25),
+          kcal: 200,
+          carbs: 10,
+          fat: 30,
+          protein: 5,
+          load: (_) async => (
+            eaten: (kcal: 1900.0, carbs: 100.0, fat: 50.0, protein: 60.0),
+            goal: (kcal: 2000.0, carbs: 250.0, fat: 70.0, protein: 120.0),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('100\u00a0kcal over', findRichText: true), findsOneWidget);
+    expect(find.text('10\u00a0g over', findRichText: true), findsOneWidget);
+    // carbs and protein are under their goals
+    expect(find.textContaining('over', findRichText: true), findsNWidgets(2));
+  });
+
   testWidgets('stacked at 2x, each name leads its figure, the bar under', (
     tester,
   ) async {

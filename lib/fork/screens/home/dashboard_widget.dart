@@ -155,7 +155,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
   @override
   Widget build(BuildContext context) {
     double kcalValue = 0;
-    double gaugeValue = 0;
     final usesKilojoules = context.watch<EnergyUnitProvider>().usesKilojoules;
     String kcalLabelText = usesKilojoules
         ? '${S.of(context).kjLabel} ${S.of(context).energyLeftLabel}'
@@ -163,18 +162,13 @@ class _DashboardWidgetState extends State<DashboardWidget> {
 
     if (widget.totalKcalLeft > widget.totalKcalDaily) {
       kcalValue = widget.totalKcalDaily;
-      gaugeValue = 0;
     } else if (widget.totalKcalLeft < 0) {
       kcalValue = widget.totalKcalLeft.abs();
-      gaugeValue = 1;
       kcalLabelText = usesKilojoules
           ? '${S.of(context).kjLabel} ${S.of(context).energyTooMuchLabel}'
           : S.of(context).kcalTooMuchLabel;
     } else {
       kcalValue = widget.totalKcalLeft;
-      gaugeValue =
-          (widget.totalKcalDaily - widget.totalKcalLeft) /
-          widget.totalKcalDaily;
     }
     final displaySupplied = usesKilojoules
         ? UnitCalc.kcalToKj(widget.totalKcalSupplied)
@@ -252,7 +246,11 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                             key: ValueKey(animationsOff(context)),
                             radius: 58,
                             lineWidth: 10,
-                            percent: gaugeValue.clamp(0.0, 1.0),
+                            percent: homeRingFill(
+                              goal: widget.totalKcalDaily,
+                              left: widget.totalKcalLeft,
+                              showsEaten: showsEaten,
+                            ),
                             animation: !animationsOff(context),
                             // The first build shows the real value at once;
                             // a later change (a meal logged) animates.
@@ -500,6 +498,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
       },
     );
   }
+}
+
+/// How full Home's ring is. Eaten: the share of the goal eaten, full past
+/// it. Left: the share of the goal still left, so it drains as meals are
+/// logged and is empty at or past the goal (the label then says "too much").
+double homeRingFill({
+  required double goal,
+  required double left,
+  required bool showsEaten,
+}) {
+  if (goal <= 0) return showsEaten && left < 0 ? 1 : 0;
+  final leftShare = (left / goal).clamp(0.0, 1.0);
+  return showsEaten ? 1 - leftShare : leftShare;
 }
 
 // true when text is scaled past 1.3×.

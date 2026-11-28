@@ -123,9 +123,14 @@ class _WeekBarsState extends State<WeekBars> {
 /// apart by more than hue.
 ({Color today, Color past}) weekBarColors(Color accent, Color surface) {
   final mark = chartSafe(accent, surface);
-  final past = chartSafe(
-    Color.alphaBlend(mark.withValues(alpha: 0.45), surface),
+  final tint = Color.alphaBlend(mark.withValues(alpha: 0.45), surface);
+  // At chartSafe's floor exactly, the demo's blue in dark drew at 3.00:1
+  // in 8-bit colour and measured under 3, so the past days keep a margin.
+  final past = shiftUntil(
+    tint,
     surface,
+    3.1,
+    darken: surface.computeLuminance() > 0.18,
   );
   final today = contrastRatio(mark, past) >= 1.5
       ? mark

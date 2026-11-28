@@ -74,7 +74,8 @@ void main() {
             find.byType(CircularPercentIndicator),
           )
           .percent,
-      closeTo(0.4, 1e-9),
+      // Left mode: 1500 of 2500 left
+      closeTo(0.6, 1e-9),
     );
   });
 

@@ -24,7 +24,8 @@ import 'package:opennutritracker/fork/screens/trends/trends_page.dart'
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/adaptive/trend_points.dart';
 import 'package:opennutritracker/fork/report/rate_text.dart';
-import 'package:opennutritracker/fork/trends/trend_stats.dart' show TrendMetric;
+import 'package:opennutritracker/fork/trends/trend_stats.dart'
+    show TrendMetric, weightIn;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show Sparkline, TrendTile;
 import 'package:opennutritracker/fork/units/energy_text.dart';
@@ -261,12 +262,18 @@ class _WeightTileState extends State<WeightTile> {
         value: value,
         // The last 7 days by name, as Weight history's "per week" is over
         // its range; its own line, as it never fits beside the trend.
-        note: kgPerWeek == null
-            ? null
-            : weeklyRateText(
-                kgPerWeek,
-                widget.unit,
-              ).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0'),
+        // The line's span too: Trends' tiles follow its range instead.
+        note: switch ([
+          if (kgPerWeek != null)
+            weeklyRateText(
+              kgPerWeek,
+              widget.unit,
+            ).replaceFirst(' a week', ' in 7 days').replaceAll(' ', '\u00A0'),
+          if (month.length >= 2) '${month.length}-day\u00A0line',
+        ]) {
+          [] => null,
+          final parts => parts.join(' · '),
+        },
         noteMuted: true,
         spokenLabel: weightSpoken(
           value,
@@ -283,6 +290,7 @@ class _WeightTileState extends State<WeightTile> {
                 values: [for (final p in month) p.weightKg],
                 color: chartAccent(context),
                 bars: false,
+                scaleText: (kg) => weightIn(widget.unit, kg).toStringAsFixed(1),
               ),
       );
     },
@@ -348,6 +356,9 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
         suffix: days.isEmpty
             ? 'after a weigh-in'
             : '${energyUnit(context)} a day',
+        // The line's span: Trends' tiles follow its range instead.
+        note: month.length < 2 ? null : '${month.length}-day\u00A0line',
+        noteMuted: true,
         spokenLabel: expenditureSpoken(
           days.isEmpty ? null : energyValue(context, days.last.expenditureKcal),
           energyUnit(context),
@@ -358,6 +369,7 @@ class _ExpenditureTileState extends State<ExpenditureTile> {
                 values: [for (final d in month) d.expenditureKcal],
                 color: chartAccent(context),
                 bars: false,
+                scaleText: (kcal) => '${energyValue(context, kcal)}',
               ),
       );
     },
