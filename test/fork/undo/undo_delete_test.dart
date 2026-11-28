@@ -212,7 +212,7 @@ void main() {
     expect(restored.last.$1, [milk]);
   });
 
-  group('under TalkBack, where the bar stays up', () {
+  group('under a screen reader, where the bar still goes after 5 s', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.instance;
       binding.platformDispatcher.accessibilityFeaturesTestValue =
@@ -225,9 +225,8 @@ void main() {
           .clearAccessibilityFeaturesTestValue,
     );
 
-    testWidgets('a delete after the bar\'s time starts a bar of its own', (
-      tester,
-    ) async {
+    testWidgets('the bar is gone after 5 s, and a later delete starts a bar '
+        'of its own', (tester) async {
       final context = await pumpScaffold(tester);
       void show(IntakeEntity intake) => DeletedEntries.show(
         context,
@@ -239,9 +238,10 @@ void main() {
 
       show(oats);
       await tester.pumpAndSettle();
-      await tester.pump(const Duration(seconds: 9));
-      await tester.pumpAndSettle();
       expect(find.text('oats deleted'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.text('oats deleted'), findsNothing);
 
       show(milk);
       await tester.pumpAndSettle();

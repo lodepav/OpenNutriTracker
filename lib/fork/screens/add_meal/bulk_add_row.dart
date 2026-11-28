@@ -311,7 +311,8 @@ extension _BulkAddRow on _BulkAddScreenState {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          persist: undoBarPersists(messenger.context),
+          persist: false,
+          duration: undoBarTime,
           content: Text('Left out: ${shownRowTitle(row)}'),
           action: SnackBarAction(
             label: 'Undo',

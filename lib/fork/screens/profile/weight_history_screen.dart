@@ -177,7 +177,6 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
               )
               .firstOrNull;
     final messenger = ScaffoldMessenger.of(context);
-    final persists = undoBarPersists(context);
     final message = replaced == null
         ? null
         : 'Replaced ${replacedText(context, replaced, _bodyWeightUnit, DateTime.now())}';
@@ -201,7 +200,8 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          persist: persists,
+          persist: false,
+          duration: undoBarTime,
           content: Text(message!),
           action: SnackBarAction(
             label: 'Undo',
@@ -232,7 +232,8 @@ class _WeightHistoryScreenState extends State<WeightHistoryScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          persist: undoBarPersists(context),
+          persist: false,
+          duration: undoBarTime,
           content: const Text('Weigh-in deleted'),
           action: SnackBarAction(
             label: 'Undo',

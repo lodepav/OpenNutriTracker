@@ -57,7 +57,6 @@ Future<void> logWeighIn(
   DateTime? today,
 }) async {
   final messenger = ScaffoldMessenger.of(context);
-  final persists = undoBarPersists(context);
   final entry = WeightLogEntity(date: _dayOf(day), weightKg: kg);
   final message =
       '${bodyWeightText(context, kg, unit)} logged for '
@@ -69,7 +68,8 @@ Future<void> logWeighIn(
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        persist: persists,
+        persist: false,
+        duration: undoBarTime,
         content: Text(message),
         action: SnackBarAction(
           label: 'Undo',

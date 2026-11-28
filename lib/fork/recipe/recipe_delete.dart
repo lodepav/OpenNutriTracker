@@ -83,9 +83,8 @@ void showRecipesDeleted(
   messenger.removeCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-      persist: undoBarPersists(messenger.context),
-      // Twice the default, as a diary delete's: a lot of work to rebuild
-      duration: const Duration(seconds: 8),
+      persist: false,
+      duration: undoBarTime,
       content: Text(
         recipes.length == 1
             ? '${recipes.single.name} deleted'
@@ -133,8 +132,8 @@ void showCustomFoodDeleted(
   messenger.removeCurrentSnackBar();
   messenger.showSnackBar(
     SnackBar(
-      persist: undoBarPersists(messenger.context),
-      duration: const Duration(seconds: 8), // as a recipe's bar
+      persist: false,
+      duration: undoBarTime,
       content: Text('$name deleted'),
       action: SnackBarAction(
         label: 'Undo',

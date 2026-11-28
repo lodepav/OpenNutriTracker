@@ -240,7 +240,8 @@ class _PlannedFoodsCardState extends State<PlannedFoodsCard> {
     messenger.removeCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        persist: undoBarPersists(messenger.context),
+        persist: false,
+        duration: undoBarTime,
         content: Text(text),
         action: SnackBarAction(
           label: 'Undo',

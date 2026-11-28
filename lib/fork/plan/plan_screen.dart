@@ -133,7 +133,8 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          persist: undoBarPersists(context),
+          persist: false,
+          duration: undoBarTime,
           content: Text('Removed ${food.meal.name ?? 'food'}'),
           action: SnackBarAction(
             label: 'Undo',

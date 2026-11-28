@@ -38,8 +38,7 @@ import 'package:opennutritracker/fork/goal/goal_status.dart'
     show signedPaceText;
 import 'package:opennutritracker/fork/goal/phase_colors.dart';
 import 'package:opennutritracker/fork/phases/phases.dart';
-import 'package:opennutritracker/fork/undo/undo_delete.dart'
-    show undoBarPersists;
+import 'package:opennutritracker/fork/undo/undo_delete.dart' show undoBarTime;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
     show signedText, waterColor;
 import 'package:opennutritracker/fork/display/display_prefs.dart';
@@ -451,11 +450,11 @@ class _CheckInWaitingNoteState extends State<CheckInWaitingNote> {
       final messenger = ScaffoldMessenger.maybeOf(context);
       if (messenger == null) return;
       final navigator = Navigator.of(context);
-      final persist = undoBarPersists(context);
       await service.markWaitingNoted(since);
       messenger.showSnackBar(
         SnackBar(
-          persist: persist,
+          persist: false,
+          duration: undoBarTime,
           content: const Text(
             'A check-in is waiting for your answer on a day that looks '
             'partly logged.',
@@ -616,14 +615,14 @@ class _CheckInScreenState extends State<CheckInScreen> {
   /// Leaves [day] out, with an Undo that counts it again.
   Future<void> _leaveOut(DateTime day) async {
     final messenger = ScaffoldMessenger.of(context);
-    final persist = undoBarPersists(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
     final service = widget.service;
     await _answerPartial(() => service.leaveOutDay(day));
     messenger.removeCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        persist: persist,
+        persist: false,
+        duration: undoBarTime,
         content: Text(
           '${DateFormat.MMMd(locale).format(day)} left out of the check-in',
         ),
@@ -683,13 +682,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
     final _TodayGoal? now;
     final List<CheckInRecord> before;
     final ScaffoldMessengerState messenger;
-    final bool persist;
     final service = widget.service;
     try {
       now = await _today.catchError((Object _) => null);
       if (!mounted) return;
       messenger = ScaffoldMessenger.of(context);
-      persist = undoBarPersists(context);
       before = await service.checkIns();
       await service.accept(checkIn, targetKcal);
     } catch (error, stackTrace) {
@@ -708,7 +705,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
     // said on Home, which comes back away from the ring
     messenger.showSnackBar(
       SnackBar(
-        persist: persist,
+        persist: false,
+        duration: undoBarTime,
         content: Text(
           move == null
               ? unread

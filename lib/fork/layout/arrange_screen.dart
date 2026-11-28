@@ -97,7 +97,8 @@ class _ArrangeScreenState extends State<ArrangeScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          persist: undoBarPersists(context),
+          persist: false,
+          duration: undoBarTime,
           content: const Text('Layout reset'),
           action: SnackBarAction(
             label: 'Undo',
