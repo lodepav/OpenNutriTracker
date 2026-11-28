@@ -228,6 +228,7 @@ class _MicroDetailState extends State<MicroDetail> {
               dates: widget.dates,
               color: chartAccent(context),
               goal: goal,
+              goalLabel: nutrient.isLimit ? 'Limit' : 'Goal',
               unit: unit,
               format: nutrient.text,
               label: '${nutrient.label} chart',

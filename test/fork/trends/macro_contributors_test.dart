@@ -210,6 +210,16 @@ void main() {
       expect(find.text('Pick a day'), findsOneWidget);
     });
 
+    testWidgets('3M\'s weekly bars take no tap, so the hint says pick', (
+      tester,
+    ) async {
+      final quarter = [for (var i = 0; i < 90; i++) DateTime(2026, 7, 29 + i)];
+      await pump(tester, (_, _) => foods, days: quarter);
+      expect(find.textContaining('Tap'), findsNothing);
+      expect(find.text('Pick a day for its foods.'), findsOneWidget);
+      expect(find.text('Pick a day'), findsOneWidget);
+    });
+
     testWidgets('the chart tells TalkBack to swipe; the tap hint is not read', (
       tester,
     ) async {

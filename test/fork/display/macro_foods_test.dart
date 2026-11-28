@@ -83,7 +83,54 @@ void main() {
     );
     expect(find.textContaining('over'), findsOneWidget);
     expect(find.textContaining('left'), findsNothing);
+    // the bar runs to what was eaten, the goal a tick at 100 of 120
+    final tick = tester.getRect(find.byType(PositionedDirectional));
+    final bar = tester.getRect(
+      find
+          .ancestor(
+            of: find.byType(PositionedDirectional),
+            matching: find.byType(Stack),
+          )
+          .first,
+    );
+    expect(tick.center.dx - bar.left, closeTo(bar.width * 100 / 120, 0.5));
+    // the part past the goal in a second, paler colour
+    final colours = {
+      for (final box in tester.widgetList<ColoredBox>(
+        find.descendant(
+          of: find.byType(ClipRRect).first,
+          matching: find.byType(ColoredBox),
+        ),
+      ))
+        box.color,
+    };
+    expect(colours, hasLength(2));
   });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('every food\'s bar ends at one place, at ${scale}x', (
+      tester,
+    ) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pump(
+        tester,
+        intakes: [oats, chicken, intakeOf('Egg', 3, protein100: 13)],
+        totals: {FoodsMetric.protein: (eaten: 45, goal: 93)},
+      );
+      final bars = find.descendant(
+        of: find.byType(FoodShareRow),
+        matching: find.byType(LinearProgressIndicator),
+      );
+      expect(bars, findsNWidgets(3));
+      final ends = {
+        for (var i = 0; i < 3; i++) tester.getRect(bars.at(i)).right,
+      };
+      // "35 g", "10 g" and "<1 g" took different widths before
+      expect(ends, hasLength(1));
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('the switch moves to another total and its foods', (
     tester,

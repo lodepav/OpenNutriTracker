@@ -16,7 +16,6 @@ import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/utils/calc/unit_calc.dart';
 import 'package:opennutritracker/core/utils/locator.dart';
-import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/features/trends/presentation/bloc/trends_bloc.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_entity.dart';
 import 'package:opennutritracker/features/add_meal/domain/entity/meal_nutriments_entity.dart';
@@ -524,7 +523,13 @@ void main() {
 
     expect(find.widgetWithText(AppBar, 'Carbs'), findsOneWidget);
     String stat(String label) {
-      final merged = tester.getSemantics(find.text(label));
+      // The header's, not the chart legend's "Goal".
+      final merged = tester.getSemantics(
+        find.descendant(
+          of: find.byType(StatHeader),
+          matching: find.text(label),
+        ),
+      );
       return merged.label;
     }
 
@@ -532,15 +537,14 @@ void main() {
     expect(stat('Goal'), contains('259 g'));
     expect(stat('Change'), contains('+60 g'));
     final chart = tester.widget<BarChart>(find.byType(BarChart)).data;
-    // From a little under the lowest to a little over the highest: the
-    // bars start at the chart's floor, an empty day is none.
-    expect(chart.minY, closeTo(200 - 60 * 0.15, 1e-9));
-    expect(chart.maxY, closeTo(260 + 60 * 0.15, 1e-9));
+    // Bars from zero, so their heights compare; an empty day is none.
+    expect(chart.minY, 0);
+    expect(chart.maxY, greaterThanOrEqualTo(260));
     final rods = [for (final g in chart.barGroups) g.barRods.single];
-    expect([for (final r in rods) r.fromY], everyElement(chart.minY));
+    expect([for (final r in rods) r.fromY], everyElement(0));
     expect(
       [for (final r in rods) r.toY],
-      [200, ...List.filled(5, chart.minY), 260],
+      [200, ...List.filled(5, 0), 260],
     );
     expect(chart.extraLinesData.horizontalLines.single.y, 259);
 
@@ -687,7 +691,14 @@ void main() {
     expect(tileText(tester, 'sodium'), contains('2.9 / 5.8 g'));
 
     await openTile(tester, 'sodium');
-    expect(find.text('Limit'), findsOneWidget);
+    // The header's, not the chart legend's "Limit".
+    expect(
+      find.descendant(
+        of: find.byType(StatHeader),
+        matching: find.text('Limit'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Under it'), findsOneWidget);
     // Today is not over, so of the two days logged only yesterday counts.
     expect(
@@ -713,7 +724,13 @@ void main() {
     await tester.pumpAndSettle();
 
     await openTile(tester, 'fibre');
-    expect(find.text('Goal'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(StatHeader),
+        matching: find.text('Goal'),
+      ),
+      findsOneWidget,
+    );
     await tester.scrollUntilVisible(
       find.textContaining('1 food logged here has no figure for fibre'),
       200,
@@ -947,7 +964,7 @@ void main() {
     // The tile's surplus and deficit in the page's two colours.
     final balanceSpark = spark('balance');
     final balancePage = tester.element(find.byType(TrendsOverview));
-    expect(balanceSpark.color, paletteOf(balancePage).fat);
+    expect(balanceSpark.color, chartSurplus(balancePage));
     expect(balanceSpark.negativeColor, chartAccent(balancePage));
     final spentColor = spark('expenditure').color;
 
@@ -956,7 +973,10 @@ void main() {
       tester.getSemantics(find.text('Average')).label,
       contains('\u2212470'),
     );
-    expect(tester.getSemantics(find.text('Logged')).label, contains('4'));
+    expect(
+      tester.getSemantics(find.text('Days with an estimate')).label,
+      contains('4'),
+    );
     final bars = tester.widget<BarChart>(find.byType(BarChart)).data.barGroups;
     expect(bars.last.barRods.single.toY, -500);
     expect(bars[1].barRods.single.toY, 0);
@@ -1064,6 +1084,115 @@ void main() {
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
+  });
+
+  testWidgets('at 1Y the pages start where the settled estimate does', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(2400, 3600);
+    addTearDown(tester.view.reset);
+    // 120 days cut at the look-back, a weigh-in long before them: the first
+    // 29 are the formula settling again, then 2900 rising to 2990.
+    final history = [
+      for (var i = -119; i <= 0; i++)
+        ExpenditureDay(
+          date: day(i),
+          expenditureKcal: i < -90 ? 3300 : 2990.0 + i,
+          intakeKcal: 2500,
+          settled: true,
+        ),
+    ];
+    final state = loaded(
+      rangeDays: 365,
+      weight: [
+        WeightLogEntity(date: day(-300), weightKg: 82),
+        WeightLogEntity(date: day(-90), weightKg: 81),
+        WeightLogEntity(date: day(0), weightKg: 80),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: S.supportedLocales,
+        home: Scaffold(
+          body: BlocProvider<TrendsBloc>.value(
+            value: SeededTrendsBloc(state),
+            child: TrendsOverview(
+              state: state,
+              weightCard: (_) => const SizedBox(),
+              waterCard: (_) => const SizedBox(),
+              cards: const {},
+              service: _Service(history),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await openTile(tester, 'expenditure');
+    expect(
+      tester.getSemantics(find.text('Change').first).label,
+      contains('+90'),
+    );
+    final spots = tester
+        .widget<LineChart>(find.byType(LineChart))
+        .data
+        .lineBarsData
+        .single
+        .spots;
+    expect(spots, hasLength(91));
+    expect(spots.first.y, 2900);
+    expect(
+      find.byKey(const ValueKey('estimate-from')),
+      findsOneWidget,
+    );
+    final table = find.byKey(const ValueKey('expenditure-changes'));
+    final cells = [
+      for (final t in tester.widgetList<Text>(
+        find.descendant(of: table, matching: find.byType(Text)),
+      ))
+        t.data!,
+    ];
+    expect(cells[cells.indexOf('90 days') + 2], '2900 kcal');
+    final scrollable = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.textContaining('It looks back 120 days'),
+      200,
+      scrollable: scrollable,
+    );
+    // The row counts the estimate's whole look-back, as it reads it.
+    expect(
+      tester
+          .widget<TrendRow>(
+            find.widgetWithText(TrendRow, 'Counted in the estimate'),
+          )
+          .value,
+      '120 days',
+    );
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await openTile(tester, 'balance');
+    expect(
+      tester.getSemantics(find.text('Days with an estimate')).label,
+      contains('91'),
+    );
+    expect(find.byKey(const ValueKey('estimate-from')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('From the balance'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    // Both weight tiles over the same 91 days.
+    expect(
+      find.textContaining('over 91 days', skipOffstage: false),
+      findsNWidgets(2),
+    );
   });
 
   testWidgets("the balance's weight is at 3500 a lb for a lb user", (

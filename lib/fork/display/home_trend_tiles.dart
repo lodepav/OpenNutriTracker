@@ -22,7 +22,7 @@ import 'package:opennutritracker/fork/trends/trends_overview.dart';
 import 'package:opennutritracker/fork/weight/weigh_in_log.dart'
     show weighInChanges;
 import 'package:opennutritracker/fork/trends/trends_widgets.dart'
-    show TrendTile;
+    show Sparkline, TrendTile;
 
 /// Trends' tiles whose number is a daily average, by id.
 const _averaged = {
@@ -181,6 +181,11 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
               frame: extras.frame,
               open: (m) => openTrendFromHome(context, m),
             );
+            // Home has no range pills: a tile with a sparkline says its span.
+            final span = rangeText(
+              state.rangeDays,
+              state.windowDays,
+            ).toLowerCase();
             return widget.builder(
               _last = {
                 for (final t in tiles)
@@ -195,9 +200,14 @@ class _HomeTrendTilesState extends State<HomeTrendTiles> {
                           : t.label,
                       value: t.value,
                       valueColor: t.valueColor,
-                      suffix: t.note == null
-                          ? t.suffix
-                          : '${t.suffix} · ${t.note}',
+                      suffix: switch ([
+                        ?t.suffix,
+                        ?t.note,
+                        if (t.chart is Sparkline) span,
+                      ]) {
+                        [] => null,
+                        final parts => parts.join(' · '),
+                      },
                       // No room kept for a tile with no chart.
                       chart: t.chart is SizedBox ? null : t.chart,
                       onTap: t.onTap,

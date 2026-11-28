@@ -5,6 +5,7 @@ import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/utils/energy_unit_provider.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_overview.dart';
 import 'package:opennutritracker/fork/trends/trends_widgets.dart';
@@ -42,6 +43,66 @@ RRect _r(double x, double y, double h) => RRect.fromRectAndRadius(
 );
 
 void main() {
+  testWidgets('the goal is a line across the bars, the scale reaching it', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 300,
+            child: Sparkline(
+              values: const [10, 20, null],
+              color: _bar,
+              goal: 40,
+            ),
+          ),
+        ),
+      ),
+    );
+    final box = tester.renderObject(
+      find.descendant(
+        of: find.byType(Sparkline),
+        matching: find.byType(CustomPaint),
+      ),
+    );
+    // 40 tops the chart: 20 is half its height, the goal at its top.
+    expect(
+      box,
+      paints
+        ..rrect(rrect: _r(42, 19.5, 6.5))
+        ..rrect(rrect: _r(142, 13, 13))
+        ..rrect()
+        ..line(p1: const Offset(0, 0.75), p2: const Offset(300, 0.75)),
+    );
+  });
+
+  testWidgets('a line prints its highest and lowest, whole at 2x in a tile', (
+    tester,
+  ) async {
+    await pumpOnPhone(
+      tester,
+      Align(
+        alignment: Alignment.topLeft,
+        child: SizedBox(
+          // A tile's chart, two tiles up on a 360 dp phone.
+          width: 140,
+          child: Sparkline(
+            values: const [3036, 2844, null, 2911],
+            color: _bar,
+            bars: false,
+            scaleText: (v) => '${v.round()}',
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('3036'), findsOneWidget);
+    expect(find.text('2844'), findsOneWidget);
+    expect(cutText(tester), isEmpty);
+  });
+
   // Three slots of 100 across 300, a bar 16 wide in the middle of each.
   testWidgets('bars stand on zero: the lowest day is a bar, not a stub', (
     tester,
@@ -55,6 +116,30 @@ void main() {
         // A day with nothing logged keeps the stub, in the track's grey.
         ..rrect(rrect: _r(242, 24, 2), color: AppPalette.light.surfaceMuted),
     );
+  });
+
+  testWidgets('bars on both sides of zero have a zero line, 3:1 on the card', (
+    tester,
+  ) async {
+    final box = await _spark(tester, [10, -10, null]);
+    final line = chartSafe(
+      AppPalette.light.textMuted,
+      AppPalette.light.surface,
+    );
+    expect(
+      box,
+      paints
+        ..rrect()
+        ..rrect()
+        ..rrect()
+        ..line(p1: const Offset(0, 13), p2: const Offset(300, 13), color: line),
+    );
+    expect(
+      contrastRatio(line, AppPalette.light.surface),
+      greaterThanOrEqualTo(3),
+    );
+    // All above zero, the bars' feet are the line: none drawn.
+    expect(await _spark(tester, [10, 20, null]), isNot(paints..line()));
   });
 
   testWidgets('a deficit hangs below zero in its own colour', (tester) async {

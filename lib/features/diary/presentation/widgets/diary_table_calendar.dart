@@ -198,8 +198,12 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
           calendarBuilders: CalendarBuilders(
             // [fork] S118 diary-header: the day rings in place of
             // upstream's marker dot
-            // (a title of its own goes without the package's tap)
-            headerTitleBuilder: (context, day) => Semantics(
+            // (a title of its own goes without the package's tap; the month
+            // says under it what a ring means)
+            headerTitleBuilder: (context, day) => Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+            Semantics(
               button: true,
               label: _format == CalendarFormat.week
                   ? 'Show the month'
@@ -242,6 +246,9 @@ class _DiaryTableCalendarState extends State<DiaryTableCalendar> {
               ),
               ),
               ),
+            ),
+                if (_format == CalendarFormat.month) const DayRingKey(),
+              ],
             ),
             // "Mon Tue Wed" ran together at 2x: each name shrinks to its
             // column, with a gap; silent, as the package's own, since each

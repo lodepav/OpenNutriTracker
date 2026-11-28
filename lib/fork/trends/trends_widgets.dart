@@ -7,7 +7,10 @@ import 'package:intl/intl.dart' as intl;
 import 'package:opennutritracker/core/presentation/widgets/app_card.dart';
 import 'package:opennutritracker/core/styles/app_palette.dart';
 import 'package:opennutritracker/core/styles/dimens.dart';
+import 'package:opennutritracker/fork/display/contrast.dart';
 import 'package:opennutritracker/fork/display/motion.dart';
+import 'package:opennutritracker/fork/trends/detail_widgets.dart'
+    show ChartLegend;
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
 import 'package:opennutritracker/fork/trends/trends_range.dart';
 import 'package:opennutritracker/fork/trends/value_axis.dart';
@@ -151,18 +154,28 @@ class Sparkline extends StatelessWidget {
   final Color? negativeColor;
   final int maxBars;
 
+  /// The daily goal, drawn as a tick across the bars; none when null.
+  final double? goal;
+
+  /// A line's highest and lowest value as printed beside it, in the unit
+  /// the tile shows; no scale when null.
+  final String Function(double value)? scaleText;
+
   const Sparkline({
     super.key,
     required this.values,
     required this.color,
     this.negativeColor,
+    this.goal,
+    this.scaleText,
     this.bars = true,
     this.maxBars = 14,
   });
 
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: SizedBox(
+  Widget build(BuildContext context) {
+    final palette = paletteOf(context);
+    final spark = SizedBox(
       height: 26,
       width: double.infinity,
       child: CustomPaint(
@@ -171,11 +184,35 @@ class Sparkline extends StatelessWidget {
           bars,
           color,
           negativeColor ?? color,
-          paletteOf(context).surfaceMuted,
+          palette.surfaceMuted,
+          bars ? goal : null,
+          chartSafe(palette.textMuted, palette.surface),
         ),
       ),
-    ),
-  );
+    );
+    final present = values.nonNulls;
+    if (bars || scaleText == null || present.isEmpty) {
+      return ExcludeSemantics(child: spark);
+    }
+    final style = Theme.of(
+      context,
+    ).textTheme.labelSmall?.copyWith(color: palette.textMuted);
+    return ExcludeSemantics(
+      child: Row(
+        children: [
+          Expanded(child: spark),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(scaleText!(present.reduce(math.max)), style: style),
+              Text(scaleText!(present.reduce(math.min)), style: style),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   /// [values] in at most [count] groups, each the mean of its days
   /// present.
@@ -199,6 +236,10 @@ class _SparkPainter extends CustomPainter {
   final Color color;
   final Color negativeColor;
   final Color track;
+  final double? goal;
+
+  /// The goal's and the zero line's colour, 3:1 on the card.
+  final Color lineColor;
 
   _SparkPainter(
     this.values,
@@ -206,6 +247,8 @@ class _SparkPainter extends CustomPainter {
     this.color,
     this.negativeColor,
     this.track,
+    this.goal,
+    this.lineColor,
   );
 
   @override
@@ -213,8 +256,12 @@ class _SparkPainter extends CustomPainter {
     final present = values.whereType<double>().toList();
     if (values.isEmpty || present.isEmpty) return;
     if (bars) {
+      final target = goal != null && goal! > 0 ? goal : null;
       // From zero, so a low day is not drawn as the stub of an empty one.
-      final hi = math.max(0.0, present.reduce(math.max));
+      final hi = math.max(
+        target ?? 0.0,
+        math.max(0.0, present.reduce(math.max)),
+      );
       final lo = math.min(0.0, present.reduce(math.min));
       final span = hi - lo;
       final zero = span == 0 ? size.height : hi / span * size.height;
@@ -239,6 +286,27 @@ class _SparkPainter extends CustomPainter {
                 : v < 0
                 ? negativeColor
                 : color,
+        );
+      }
+      // The line deficits hang from, so a bar's side of it reads.
+      if (lo < 0) {
+        canvas.drawLine(
+          Offset(0, zero),
+          Offset(size.width, zero),
+          Paint()
+            ..color = lineColor
+            ..strokeWidth = 1,
+        );
+      }
+      if (target != null) {
+        // Inside the box, so the line at the top is not cut in half.
+        final y = (zero - target / span * size.height).clamp(0.75, size.height);
+        canvas.drawLine(
+          Offset(0, y),
+          Offset(size.width, y),
+          Paint()
+            ..color = lineColor
+            ..strokeWidth = 1.5,
         );
       }
       return;
@@ -278,7 +346,9 @@ class _SparkPainter extends CustomPainter {
       old.values != values ||
       old.color != color ||
       old.negativeColor != negativeColor ||
-      old.bars != bars;
+      old.bars != bars ||
+      old.goal != goal ||
+      old.lineColor != lineColor;
 }
 
 /// One tile of a grid, on Home, Trends and You alike: what it is, its
@@ -571,27 +641,90 @@ String Function(int i) dayLabels(BuildContext context, List<DateTime> dates) {
   return (i) => format.format(dates[i]);
 }
 
-/// The x axis of a daily chart: the weekday under each bar for a week,
-/// else none; [right], its value axis.
+/// The range [dates] spans, as a page's header says it: "Nov 2025 –
+/// Nov 2026" over more than about six months, "Dec 30, 2025 – Jan 5, 2026"
+/// across a new year, else "Oct 30 – Nov 28"; as the Expenditure chart's
+/// dates.
+String rangeDatesText(BuildContext context, List<DateTime> dates) {
+  if (dates.isEmpty) return '';
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  final format = dates.length > 183
+      ? intl.DateFormat.yMMM(locale)
+      : dates.first.year != dates.last.year
+      ? intl.DateFormat.yMMMd(locale)
+      : intl.DateFormat.MMMd(locale);
+  if (dates.length == 1) return format.format(dates.single);
+  return '${format.format(dates.first)} – ${format.format(dates.last)}';
+}
+
+/// The x axis of a bar chart whose bars start on [dates], [perBar] days a
+/// bar ([daysPerBar]): the weekday under each of a week's daily bars, else
+/// the first, middle and last bar's date ("Nov 2025" for months), the
+/// middle left out where the three would not fit; [right], its value axis.
 FlTitlesData weekdayTitles(
   BuildContext context,
   List<DateTime> dates, {
   AxisTitles right = const AxisTitles(),
+  int perBar = 1,
 }) {
-  if (dates.length > 7) {
-    return FlTitlesData(
-      leftTitles: const AxisTitles(),
-      topTitles: const AxisTitles(),
-      bottomTitles: const AxisTitles(),
-      rightTitles: right,
-    );
-  }
-  final format = intl.DateFormat.E(
-    Localizations.localeOf(context).toLanguageTag(),
-  );
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  final weekdays = perBar == 1 && dates.length <= 7;
+  final format = weekdays
+      ? intl.DateFormat.E(locale)
+      : perBar >= 28
+      ? intl.DateFormat.yMMM(locale)
+      // Across a new year, as the Expenditure chart's dates.
+      : dates.first.year != dates.last.year
+      ? intl.DateFormat.yMMMd(locale)
+      : intl.DateFormat.MMMd(locale);
   final style = Theme.of(
     context,
   ).textTheme.labelSmall?.copyWith(color: paletteOf(context).textMuted);
+  final scaler = MediaQuery.textScalerOf(context);
+  final last = dates.length - 1;
+  double wide(String text) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textScaler: scaler,
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+    final w = painter.width;
+    painter.dispose();
+    return w;
+  }
+
+  Widget dated(double x, TitleMeta meta) {
+    final i = x.toInt();
+    if (i != 0 && i != last && i != last ~/ 2) return const SizedBox.shrink();
+    final text = format.format(dates[i]);
+    if (i == last ~/ 2 && i != 0) {
+      // The ends' labels sit inside the edges, the middle's centred.
+      final end = math.max(
+        wide(format.format(dates.first)),
+        wide(format.format(dates.last)),
+      );
+      if (2 * end + wide(text) + 24 > meta.parentAxisSize) {
+        return const SizedBox.shrink();
+      }
+    }
+    // The ends shifted inside by their own width: fl_chart's fitInside
+    // measures a label once, so after a font change it cut the first.
+    final half = wide(text) / 2;
+    final shift = i == 0
+        ? math.max(0.0, half - meta.axisPosition)
+        : i == last
+        ? math.min(0.0, meta.parentAxisSize - meta.axisPosition - half)
+        : 0.0;
+    return Transform.translate(
+      offset: Offset(shift, 0),
+      child: SideTitleWidget(
+        meta: meta,
+        child: Text(text, softWrap: false, style: style),
+      ),
+    );
+  }
+
   return FlTitlesData(
     leftTitles: const AxisTitles(),
     rightTitles: right,
@@ -600,19 +733,21 @@ FlTitlesData weekdayTitles(
       sideTitles: SideTitles(
         showTitles: true,
         // Grown with the text, so a large font is not cut off.
-        reservedSize: MediaQuery.textScalerOf(context).scale(22),
-        getTitlesWidget: (x, meta) => SideTitleWidget(
-          meta: meta,
-          // Shrunk to its day's slot, which the value axis narrows, with a
-          // gap to the next.
-          child: SizedBox(
-            width: math.max(0, meta.parentAxisSize / dates.length - 4),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(format.format(dates[x.toInt()]), style: style),
-            ),
-          ),
-        ),
+        reservedSize: scaler.scale(22),
+        getTitlesWidget: (x, meta) => weekdays
+            ? SideTitleWidget(
+                meta: meta,
+                // Shrunk to its day's slot, which the value axis narrows,
+                // with a gap to the next.
+                child: SizedBox(
+                  width: math.max(0, meta.parentAxisSize / dates.length - 4),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(format.format(dates[x.toInt()]), style: style),
+                  ),
+                ),
+              )
+            : dated(x, meta),
       ),
     ),
   );
@@ -647,9 +782,127 @@ ExtraLinesData goalLine(BuildContext context, double? goal) =>
         ],
       );
 
-/// Bars a day of [values] (already in the unit shown), with the [goal]
-/// dashed across; given a [negativeColor], bars stand on a zero line and
-/// negative ones hang below it.
+/// The days a bar of a range of [days] stands for: one to a month, a week
+/// to six months, past that a calendar month (30).
+int daysPerBar(int days) => days <= 31
+    ? 1
+    : days <= 186
+    ? 7
+    : 30;
+
+/// The bars of a range of [dates] ([daysPerBar]), each its days' indices
+/// from start to end (exclusive): a day each; a week each, the last
+/// ending on the last day, so the newest bar is the last seven days; or a
+/// calendar month each.
+List<({int start, int end})> barSpans(List<DateTime> dates) {
+  final n = dates.length;
+  return switch (daysPerBar(n)) {
+    1 => [for (var i = 0; i < n; i++) (start: i, end: i + 1)],
+    7 => [
+      for (var end = n - (n - 1) ~/ 7 * 7; end <= n; end += 7)
+        (start: math.max(0, end - 7), end: end),
+    ],
+    _ => _months(dates),
+  };
+}
+
+List<({int start, int end})> _months(List<DateTime> dates) {
+  final spans = <({int start, int end})>[];
+  var start = 0;
+  for (var i = 1; i <= dates.length; i++) {
+    if (i == dates.length || dates[i].month != dates[start].month) {
+      spans.add((start: start, end: i));
+      start = i;
+    }
+  }
+  return spans;
+}
+
+/// [values] averaged over each of [spans]: the mean of its days logged,
+/// null without any.
+DaySeries spanMeans(DaySeries values, List<({int start, int end})> spans) => [
+  for (final s in spans) meanOf(values.sublist(s.start, s.end)),
+];
+
+/// What a bar of [span] of [dates] stands for, as its tooltip says it:
+/// the day "Nov 3", the week "Nov 3 – Nov 9" or the month "Nov 2025".
+String Function(({int start, int end}) span) spanLabels(
+  BuildContext context,
+  List<DateTime> dates,
+) {
+  final locale = Localizations.localeOf(context).toLanguageTag();
+  final day = intl.DateFormat.MMMd(locale);
+  final month = intl.DateFormat.yMMM(locale);
+  final perBar = daysPerBar(dates.length);
+  return (s) => perBar == 1 || s.end - s.start == 1
+      ? day.format(dates[s.start])
+      : perBar == 7
+      ? '${day.format(dates[s.start])} – ${day.format(dates[s.end - 1])}'
+      : month.format(dates[s.start]);
+}
+
+/// A bar's tooltip: its figure, or for a bar of several days their
+/// average, and what the bar stands for.
+String barTooltip(
+  String figure,
+  String unit,
+  String span, {
+  required bool many,
+}) => many ? 'Average $figure $unit\n$span' : '$figure $unit\n$span';
+
+/// [goal] as an error range on a bar reaching [toY], so fl_chart hands the
+/// goal's height to [goalTicks]' painter; none without a goal.
+FlErrorRange? goalRange(double toY, double? goal) => goal == null || goal <= 0
+    ? null
+    : FlErrorRange(
+        lowerBy: math.max(0, toY - goal),
+        upperBy: math.max(0, goal - toY),
+      );
+
+/// Each bar's own goal ([goalRange]) as a tick across it, in [color].
+FlErrorIndicatorData<BarChartSpotErrorRangeCallbackInput> goalTicks(
+  Color color,
+) => FlErrorIndicatorData(
+  painter: (input) => _GoalTick(color, input.rod.width + 6),
+);
+
+class _GoalTick extends FlSpotErrorRangePainter {
+  final Color color;
+  final double width;
+
+  const _GoalTick(this.color, this.width);
+
+  @override
+  void draw(
+    Canvas canvas,
+    Offset offsetInCanvas,
+    FlSpot origin,
+    Rect errorRelativeRect,
+    AxisChartData axisChartData,
+  ) {
+    // The range runs from the bar's top to the goal, up or down.
+    final y =
+        offsetInCanvas.dy +
+        ((origin.yError?.upperBy ?? 0) > 0
+            ? errorRelativeRect.top
+            : errorRelativeRect.bottom);
+    canvas.drawLine(
+      Offset(offsetInCanvas.dx - width / 2, y),
+      Offset(offsetInCanvas.dx + width / 2, y),
+      Paint()
+        ..color = color
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  List<Object?> get props => [color, width];
+}
+
+/// Bars a day of [values] (already in the unit shown) from zero, a week's
+/// or a month's average a bar over a longer range ([barSpans]), with the
+/// [goal] dashed across; given a [negativeColor], bars stand on a zero
+/// line and negative ones hang below it.
 class DailyBarChart extends StatelessWidget {
   final DaySeries values;
   final List<DateTime> dates;
@@ -658,11 +911,16 @@ class DailyBarChart extends StatelessWidget {
   final double? goal;
   final String unit;
 
+  /// What the legend calls the [goal] line: "Limit" for a limit.
+  final String goalLabel;
+
   /// A bar's figure as its tooltip shows it; whole numbers when null.
   final String Function(double value)? format;
   final String label;
 
   /// A tap on a day's bar; [selected] is the day picked, the others dimmed.
+  /// A bar of several days is not a day: it takes no tap, and dims as one
+  /// with the day picked in it.
   final void Function(int index)? onTap;
   final int? selected;
 
@@ -674,6 +932,7 @@ class DailyBarChart extends StatelessWidget {
     this.negativeColor,
     this.goal,
     required this.unit,
+    this.goalLabel = 'Goal',
     this.format,
     required this.label,
     this.onTap,
@@ -686,22 +945,27 @@ class DailyBarChart extends StatelessWidget {
     if (present.isEmpty) {
       return noData(context, 'Nothing logged in this range.');
     }
-    // Over the period's own lowest and highest (and the goal), so its
-    // changes show; bars that cross zero keep it.
+    final spans = barSpans(dates);
+    final many = spans.length < values.length;
+    final bars = many ? spanMeans(values, spans) : values;
+    // From zero, so a day's bar is as long as its figure: half the bar,
+    // half the amount.
     final range = fittedRange([
-      ...present,
+      ...bars.nonNulls,
       if (goal != null && goal! > 0) goal!,
-      if (negativeColor != null || present.any((v) => v < 0)) 0,
+      0,
     ]);
+    final shown = bars.whereType<double>();
     final axis = valueAxis(
       context,
       range.min,
       range.max,
-      bothSides: present.any((v) => v < 0) && present.any((v) => v > 0),
+      bothSides: shown.any((v) => v < 0) && shown.any((v) => v > 0),
     );
     final goals = goalLine(context, goal).horizontalLines;
-    final base = range.min > 0 ? range.min : 0.0;
     final dayLabel = dayLabels(context, dates);
+    final spanLabel = spanLabels(context, dates);
+    final palette = paletteOf(context);
     final scheme = Theme.of(context).colorScheme;
     String spoken(int i) => switch (values[i]) {
       null => '${dayLabel(i)}, nothing logged',
@@ -713,7 +977,10 @@ class DailyBarChart extends StatelessWidget {
     }
 
     final picked = selected == null ? null : spoken(selected!);
-    return Semantics(
+    final pickedBar = selected == null
+        ? null
+        : spans.indexWhere((s) => s.start <= selected! && selected! < s.end);
+    final chart = Semantics(
       container: true,
       label: label,
       value: picked,
@@ -728,6 +995,8 @@ class DailyBarChart extends StatelessWidget {
         height: 200,
         child: LayoutBuilder(
           builder: (context, box) => BarChart(
+            // A new range is drawn afresh, not morphed from the old bars.
+            key: ValueKey((dates.firstOrNull, dates.length)),
             duration: motionDuration(
               context,
               const Duration(milliseconds: 150),
@@ -738,20 +1007,25 @@ class DailyBarChart extends StatelessWidget {
               alignment: BarChartAlignment.spaceAround,
               gridData: const FlGridData(show: false),
               borderData: FlBorderData(show: false),
-              titlesData: weekdayTitles(context, dates, right: axis.titles),
+              titlesData: weekdayTitles(
+                context,
+                [for (final s in spans) dates[s.start]],
+                right: axis.titles,
+                perBar: daysPerBar(dates.length),
+              ),
               extraLinesData: ExtraLinesData(
                 horizontalLines: [
                   if (negativeColor != null)
                     HorizontalLine(
                       y: 0,
-                      color: paletteOf(context).textMuted,
+                      color: palette.textMuted,
                       strokeWidth: 1,
                     ),
                   ...goals,
                 ],
               ),
               barTouchData: BarTouchData(
-                touchCallback: onTap == null
+                touchCallback: onTap == null || many
                     ? null
                     : (event, response) {
                         final spot = response?.spot;
@@ -764,31 +1038,33 @@ class DailyBarChart extends StatelessWidget {
                   fitInsideHorizontally: true,
                   fitInsideVertically: true,
                   getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                    '${format?.call(rod.toY) ?? rod.toY.round()} $unit\n${dayLabel(group.x)}',
+                    barTooltip(
+                      '${format?.call(rod.toY) ?? rod.toY.round()}',
+                      unit,
+                      spanLabel(spans[group.x]),
+                      many: many,
+                    ),
                     TextStyle(color: scheme.onInverseSurface),
                   ),
                 ),
               ),
               barGroups: [
-                for (final (i, v) in values.indexed)
+                for (final (i, v) in bars.indexed)
                   BarChartGroupData(
                     x: i,
                     barRods: [
                       BarChartRodData(
-                        fromY: base,
-                        toY: v ?? base,
-                        width: barWidth(
-                          box.maxWidth - axis.width,
-                          values.length,
-                        ),
+                        fromY: 0,
+                        toY: v ?? 0,
+                        width: barWidth(box.maxWidth - axis.width, bars.length),
                         color: ((v ?? 0) < 0 ? negativeColor ?? color : color)
                             .withValues(
-                              alpha: selected == null || selected == i
+                              alpha: pickedBar == null || pickedBar == i
                                   ? 1
                                   : 0.35,
                             ),
                         borderRadius: BorderRadius.circular(
-                          values.length <= 31 ? 3 : 0,
+                          bars.length <= 31 ? 3 : 0,
                         ),
                       ),
                     ],
@@ -798,6 +1074,17 @@ class DailyBarChart extends StatelessWidget {
           ),
         ),
       ),
+    );
+    if (goals.isEmpty) return chart;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        chart,
+        const SizedBox(height: Dimens.spacing8),
+        ChartLegend(
+          entries: [(label: goalLabel, color: palette.textMuted, line: true)],
+        ),
+      ],
     );
   }
 }

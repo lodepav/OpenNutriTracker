@@ -137,14 +137,7 @@ List<Widget> _header(
   final mean = meanOf(energy);
   final goal = goalOf(state.days, dates, (d) => d.calorieGoal);
   final logged = energy.whereType<double>().length;
-  final format = intl.DateFormat.MMMd(
-    Localizations.localeOf(context).toLanguageTag(),
-  );
-  final span = dates.isEmpty
-      ? ''
-      : dates.length == 1
-      ? format.format(dates.single)
-      : '${format.format(dates.first)} – ${format.format(dates.last)}';
+  final span = rangeDatesText(context, dates);
   return [
     StatHeader(
       stats: [
@@ -177,7 +170,8 @@ typedef _Macro = ({
 });
 
 /// A bar a day, carbs, fat and protein stacked in the user's macro order,
-/// the goal dashed across.
+/// or a week's or a month's average over a longer range ([barSpans]); the
+/// goal dashed across, or ticked on each bar where the goals differ.
 class MacroEnergyChart extends StatelessWidget {
   final TrendsLoaded state;
   final List<DateTime> dates;
@@ -191,13 +185,8 @@ class MacroEnergyChart extends StatelessWidget {
     final kj = usesKj(context);
     double shown(double kcal) => kj ? UnitCalc.kcalToKj(kcal) : kcal;
     final unit = energyUnit(context);
-    final byDate = {
-      for (final d in state.days)
-        DateTime(d.day.year, d.day.month, d.day.day): d,
-    };
     final energy = nutritionSeries(state.days, dates, (d) => d.caloriesTracked);
     final mean = meanOf(energy);
-    final logged = energy.nonNulls.toList();
     final goal = goalOf(state.days, dates, (d) => d.calorieGoal);
     final macros = inMacroOrder<_Macro>(
       carbs: (
@@ -216,10 +205,42 @@ class MacroEnergyChart extends StatelessWidget {
         of: (m) => m.protein,
       ),
     );
-    final dayLabel = dayLabels(context, dates);
+    final spans = barSpans(dates);
+    final many = spans.length < dates.length;
+    final byDate = {
+      for (final d in state.days)
+        DateTime(d.day.year, d.day.month, d.day.day): d,
+    };
+    final bars = _bars(
+      energy,
+      [
+        for (final date in dates)
+          if (byDate[date] case final d?) macroEnergy(d) else null,
+      ],
+      spans,
+      macros,
+    );
+    // What is spoken is what is drawn: the bars' heights.
+    final heights = [for (final b in bars.nonNulls) b.total];
+    final perBar = !many
+        ? ''
+        : daysPerBar(dates.length) == 7
+        ? "a week's average a bar, "
+        : "a month's average a bar, ";
+    final goals = spanMeans(
+      nutritionSeries(
+        state.days,
+        dates,
+        (d) => d.calorieGoal,
+      ).map((g) => g != null && g > 0 ? g : null).toList(),
+      spans,
+    );
+    // Ticks only where they say more than one line would.
+    final tick = goals.nonNulls.map((g) => shown(g).round()).toSet().length > 1;
+    final spanLabel = spanLabels(context, dates);
     final top = [
-      for (final v in energy) shown(v ?? 0),
-      if (goal != null) shown(goal),
+      for (final b in bars) shown(b?.total ?? 0),
+      if (tick) ...goals.nonNulls.map(shown) else if (goal != null) shown(goal),
       1.0,
     ].reduce(math.max);
     final axis = valueAxis(context, 0, top * 1.12);
@@ -234,13 +255,16 @@ class MacroEnergyChart extends StatelessWidget {
           else
             ChartSemantics(
               label:
-                  '${energyTitle(context)} by macro chart, between '
-                  '${shown(logged.reduce(math.min)).round()} and '
-                  '${shown(logged.reduce(math.max)).round()} $unit a day',
+                  '${energyTitle(context)} by macro chart, '
+                  '$perBar'
+                  'between ${shown(heights.reduce(math.min)).round()} and '
+                  '${shown(heights.reduce(math.max)).round()} $unit a day',
               child: SizedBox(
                 height: 200,
                 child: LayoutBuilder(
                   builder: (context, box) => BarChart(
+                    // A new range is drawn afresh, not morphed from the old.
+                    key: ValueKey((dates.firstOrNull, dates.length)),
                     duration: motionDuration(
                       context,
                       const Duration(milliseconds: 150),
@@ -253,13 +277,15 @@ class MacroEnergyChart extends StatelessWidget {
                       borderData: FlBorderData(show: false),
                       titlesData: weekdayTitles(
                         context,
-                        dates,
+                        [for (final s in spans) dates[s.start]],
                         right: axis.titles,
+                        perBar: daysPerBar(dates.length),
                       ),
                       extraLinesData: goalLine(
                         context,
-                        goal == null ? null : shown(goal),
+                        tick || goal == null ? null : shown(goal),
                       ),
+                      errorIndicatorData: goalTicks(palette.textMuted),
                       barTouchData: BarTouchData(
                         touchTooltipData: BarTouchTooltipData(
                           getTooltipColor: (_) => scheme.inverseSurface,
@@ -267,17 +293,23 @@ class MacroEnergyChart extends StatelessWidget {
                           fitInsideVertically: true,
                           // Rounded, as energyValue is everywhere (S114).
                           getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                            '${rod.toY.round()} $unit\n${dayLabel(group.x)}',
+                            barTooltip(
+                              '${rod.toY.round()}',
+                              unit,
+                              spanLabel(spans[group.x]),
+                              many: many,
+                            ),
                             TextStyle(color: scheme.onInverseSurface),
                           ),
                         ),
                       ),
                       barGroups: [
-                        for (final (i, date) in dates.indexed)
+                        for (final (i, b) in bars.indexed)
                           _group(
                             i,
-                            byDate[date],
-                            box.maxWidth - axis.width,
+                            b,
+                            tick ? goals[i] : null,
+                            barWidth(box.maxWidth - axis.width, bars.length),
                             macros,
                             shown,
                             palette.textMuted,
@@ -304,48 +336,83 @@ class MacroEnergyChart extends StatelessWidget {
 
   BarChartGroupData _group(
     int x,
-    TrackedDayEntity? day,
+    _Bar? bar,
+    double? goal,
     double width,
     List<_Macro> macros,
     double Function(double) shown,
     Color plain,
   ) {
-    final w = barWidth(width, dates.length);
-    if (day == null || !isLogged(day)) {
+    final tick = goal == null ? null : shown(goal);
+    if (bar == null) {
       return BarChartGroupData(
         x: x,
-        barRods: [BarChartRodData(toY: 0, width: w)],
+        barRods: [
+          BarChartRodData(
+            toY: 0,
+            width: width,
+            toYErrorRange: goalRange(0, tick),
+          ),
+        ],
       );
     }
-    final split = macroEnergy(day);
-    final total = shown(day.caloriesTracked);
-    if (split == null) {
-      // Energy logged without macros: one plain bar.
-      return BarChartGroupData(
-        x: x,
-        barRods: [BarChartRodData(toY: total, width: w, color: plain)],
-      );
-    }
-    var from = 0.0;
+    final total = shown(bar.total);
     final items = <BarChartRodStackItem>[];
-    for (final m in macros) {
-      final to = from + shown(m.of(split));
-      items.add(BarChartRodStackItem(from, to, m.color));
-      from = to;
+    if (bar.parts.any((p) => p > 0)) {
+      var from = 0.0;
+      for (final (i, m) in macros.indexed) {
+        final to = from + shown(bar.parts[i]);
+        items.add(BarChartRodStackItem(from, to, m.color));
+        from = to;
+      }
+      // Days logged without macros, in a bar of several, on top and plain.
+      if (total - from > 0.5) {
+        items.add(BarChartRodStackItem(from, total, plain));
+      }
     }
     return BarChartGroupData(
       x: x,
       barRods: [
         BarChartRodData(
           toY: total,
-          width: w,
+          width: width,
+          // Energy logged without macros: one plain bar.
+          color: items.isEmpty ? plain : null,
           rodStackItems: items,
+          toYErrorRange: goalRange(total, tick),
           borderRadius: BorderRadius.circular(dates.length <= 31 ? 3 : 0),
         ),
       ],
     );
   }
 }
+
+typedef _Bar = ({double total, List<double> parts});
+
+/// Each bar's energy and its macros' parts in [macros]' order, the mean of
+/// its days logged: a day without macros adds to the total, to no part.
+List<_Bar?> _bars(
+  DaySeries energy,
+  List<({double carbs, double fat, double protein})?> splits,
+  List<({int start, int end})> spans,
+  List<_Macro> macros,
+) => [
+  for (final s in spans)
+    if (meanOf(energy.sublist(s.start, s.end)) case final total?)
+      (
+        total: total,
+        parts: [
+          for (final m in macros)
+            meanOf([
+              for (var i = s.start; i < s.end; i++)
+                if (energy[i] != null)
+                  splits[i] == null ? 0.0 : m.of(splits[i]!),
+            ])!,
+        ],
+      )
+    else
+      null,
+];
 
 /// The logged days against their goals, and the highest and lowest.
 class DaysWentCard extends StatelessWidget {

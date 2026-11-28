@@ -90,4 +90,24 @@ void main() {
     expect(ringOf(26), isNull);
     expect(ringOf(27), isNotNull);
   });
+
+  // Only TalkBack said what a ring measures; the month says it on screen.
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('the month says what a ring and its red mean, at ${scale}x', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_app(textScale: scale));
+      await tester.pumpAndSettle();
+      const key = 'Ring: share of energy goal · Red: 500+ over or 1000+ kcal '
+          'under';
+      expect(find.text(key), findsNothing);
+      await tester.tap(find.byIcon(Icons.expand_more_rounded));
+      await tester.pumpAndSettle();
+      expect(find.text(key), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

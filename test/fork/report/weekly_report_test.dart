@@ -119,6 +119,52 @@ void main() {
     expect(weeks[1].marks, [o, o, o, o, o, l, m]);
   });
 
+  test('a week the range cuts is counted whole from its Monday', () {
+    // 1W on Friday the 23rd: the range starts on Saturday the 17th.
+    final first = DateTime(2026, 10, 17);
+    expect(weekStart(first), DateTime(2026, 10, 12));
+    expect(weekStart(DateTime(2026, 10, 12)), DateTime(2026, 10, 12));
+    final weeks = weeklyReports(
+      [_day(10, 13, 1800), _day(10, 15, 1900), _day(10, 18, 2300)],
+      weekStart(first),
+      _today,
+    );
+    expect(weeks.map((w) => (w.monday, w.daysLogged, w.daysShown)), [
+      (DateTime(2026, 10, 12), 3, 7),
+    ]);
+  });
+
+  testWidgets('under 1W the previous week reads its whole week', (
+    tester,
+  ) async {
+    (DateTime, DateTime)? asked;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: WeeklyReportCard(
+            days: [_day(10, 18, 2300), _day(10, 19, 1900)],
+            rangeDays: 7,
+            palette: AppPalette.light,
+            clock: () => _today,
+            loadWeeks: (from, to) async {
+              asked = (from, to);
+              return [
+                _day(10, 13, 1800),
+                _day(10, 15, 1900),
+                _day(10, 18, 2300),
+                _day(10, 19, 1900),
+              ];
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(asked, (DateTime(2026, 10, 12), DateTime(2026, 10, 23)));
+    expect(find.text('3 of 7 days logged'), findsOneWidget);
+    expect(find.text('1 of 5 days logged'), findsOneWidget);
+  });
+
   test('energy within 10% of the goal is on target', () {
     expect(energyStanding((eaten: 2200, goal: 2000)), EnergyStanding.onTarget);
     expect(energyStanding((eaten: 1800, goal: 2000)), EnergyStanding.onTarget);

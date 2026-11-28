@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
 import 'package:opennutritracker/fork/trends/expenditure_detail.dart';
 
@@ -142,5 +143,48 @@ void main() {
     await tester.pumpAndSettle();
     final data = tester.widget<LineChart>(find.byType(LineChart)).data;
     expect(data.maxY - data.minY, greaterThanOrEqualTo(200));
+  });
+
+  testWidgets('a year names its years; an estimate starting late starts the '
+      'line and says so', (tester) async {
+    final dates = [
+      for (var i = 0; i < 365; i++) DateTime(2025, 11, 29 + i),
+    ];
+    Future<void> pump(List<DateTime> estimated) => tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: ExpenditureChart(
+              history: [
+                for (final d in estimated)
+                  ExpenditureDay(
+                    date: d,
+                    expenditureKcal: 3000,
+                    settled: true,
+                  ),
+              ],
+              dates: dates,
+            ),
+          ),
+        ),
+      ),
+    );
+    await pump(dates);
+    expect(find.text('Nov 2025'), findsOneWidget);
+    expect(find.text('Nov 2026'), findsOneWidget);
+    expect(find.byKey(const ValueKey('estimate-from')), findsNothing);
+
+    await pump(dates.sublist(300));
+    final spots = tester
+        .widget<LineChart>(find.byType(LineChart))
+        .data
+        .lineBarsData
+        .single
+        .spots;
+    expect(spots, hasLength(65));
+    final from = DateFormat.MMMd('en_US').format(dates[300]);
+    expect(find.text('Estimate from $from'), findsOneWidget);
+    // Two months, one year: day and month.
+    expect(find.text(from), findsOneWidget);
   });
 }

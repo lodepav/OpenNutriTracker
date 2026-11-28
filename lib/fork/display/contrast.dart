@@ -53,6 +53,11 @@ Color chartAccent(BuildContext context) => chartSafe(
   paletteOf(context).surface,
 );
 
+/// An energy surplus as a chart colour on a card: muted ink, so it never
+/// reads as a macro's colour (fat is red) or as the accent (a deficit).
+Color chartSurplus(BuildContext context) =>
+    chartSafe(paletteOf(context).textMuted, paletteOf(context).surface);
+
 /// The user's accent as text, at 4.5:1 on the canvas, the card and muted
 /// panels.
 Color textAccent(BuildContext context) => textAccentOf(

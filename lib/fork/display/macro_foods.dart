@@ -169,6 +169,13 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
         (eaten: shares.fold(0.0, (s, f) => s + f.value), goal: 0.0);
     final top = shares.isEmpty ? 0.0 : shares.first.value;
     final label = _label(context, _metric);
+    String? percentOf(FoodShare share) => total.eaten > 0
+        ? '${(100 * share.value / total.eaten).round()}%'
+        : null;
+    final trailingWidth = foodShareTrailingWidth(context, [
+      for (final share in shares)
+        (_amount(context, share.value), percentOf(share)),
+    ]);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
@@ -241,9 +248,8 @@ class _MacroFoodsPageState extends State<MacroFoodsPage> {
                     FoodShareRow(
                       share: share,
                       amount: _amount(context, share.value),
-                      percent: total.eaten > 0
-                          ? '${(100 * share.value / total.eaten).round()}%'
-                          : null,
+                      percent: percentOf(share),
+                      trailingWidth: trailingWidth,
                       fraction: top > 0 ? share.value / top : 0,
                       color: color,
                       palette: palette,
@@ -343,12 +349,19 @@ class _Summary extends StatelessWidget {
             ),
             if (hasGoal) ...[
               const SizedBox(height: Dimens.spacing8),
-              _Bar(
-                fraction: total.eaten / total.goal,
-                color: color,
-                track: palette.surfaceMuted,
-                height: 8,
-              ),
+              if (total.eaten > total.goal)
+                _OverBar(
+                  goalShare: total.goal / total.eaten,
+                  colors: weekBarColors(color, palette.surfaceMuted),
+                  tick: palette.textStrong,
+                )
+              else
+                _Bar(
+                  fraction: total.eaten / total.goal,
+                  color: color,
+                  track: palette.surfaceMuted,
+                  height: 8,
+                ),
             ],
           ],
         ),
@@ -369,11 +382,16 @@ class FoodShareRow extends StatelessWidget {
   final TextTheme text;
   final VoidCallback onTap;
 
+  /// The amount column's width, the same on every row of a list so the bars
+  /// end together ([foodShareTrailingWidth]); its own width when null.
+  final double? trailingWidth;
+
   const FoodShareRow({
     super.key,
     required this.share,
     required this.amount,
     required this.percent,
+    this.trailingWidth,
     required this.fraction,
     required this.color,
     required this.palette,
@@ -431,23 +449,21 @@ class FoodShareRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: Dimens.spacing12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      amount,
-                      style: text.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (percent != null)
-                      Text(
-                        percent!,
-                        style: text.bodySmall?.copyWith(
-                          color: palette.textMuted,
+                SizedBox(
+                  width: trailingWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(amount, style: _amountStyle(text)),
+                      if (percent != null)
+                        Text(
+                          percent!,
+                          style: _percentStyle(
+                            text,
+                          )?.copyWith(color: palette.textMuted),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -456,6 +472,35 @@ class FoodShareRow extends StatelessWidget {
       ),
     );
   }
+}
+
+TextStyle? _amountStyle(TextTheme text) =>
+    text.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+
+TextStyle? _percentStyle(TextTheme text) => text.bodySmall;
+
+/// The widest amount and percent of a list's [rows] at the user's text size,
+/// for [FoodShareRow.trailingWidth], so every row's bar ends at one place.
+double foodShareTrailingWidth(
+  BuildContext context,
+  Iterable<(String, String?)> rows,
+) {
+  final text = Theme.of(context).textTheme;
+  double width(String s, TextStyle? style) => (TextPainter(
+    text: TextSpan(text: s, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout()).width;
+  var widest = 0.0;
+  for (final (amount, percent) in rows) {
+    widest = [
+      widest,
+      width(amount, _amountStyle(text)),
+      if (percent != null) width(percent, _percentStyle(text)),
+    ].reduce((a, b) => a > b ? a : b);
+  }
+  return widest.ceilToDouble();
 }
 
 /// The food's kind, as its diary row shows it when it has no photo (S117).
@@ -486,6 +531,60 @@ class _KindIcon extends StatelessWidget {
           style: const TextStyle(fontSize: 18),
         ),
       },
+    ),
+  );
+}
+
+/// A total past its goal: the bar's length is what was eaten, the goal a
+/// tick across it, the part past it in the paler of [colors].
+class _OverBar extends StatelessWidget {
+  final double goalShare;
+  final ({Color today, Color past}) colors;
+  final Color tick;
+
+  const _OverBar({
+    required this.goalShare,
+    required this.colors,
+    required this.tick,
+  });
+
+  // Silent, as [_Bar]: the figures above say how far over.
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: SizedBox(
+      height: 14,
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final goal = box.maxWidth * goalShare.clamp(0.0, 1.0);
+          return Stack(
+            alignment: AlignmentDirectional.centerStart,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: SizedBox(
+                  height: 8,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: goal,
+                        child: ColoredBox(color: colors.today),
+                      ),
+                      Expanded(child: ColoredBox(color: colors.past)),
+                    ],
+                  ),
+                ),
+              ),
+              PositionedDirectional(
+                start: goal - 1,
+                top: 0,
+                bottom: 0,
+                child: SizedBox(width: 2, child: ColoredBox(color: tick)),
+              ),
+            ],
+          );
+        },
+      ),
     ),
   );
 }
