@@ -145,7 +145,6 @@ class _StrengthCardState extends State<StrengthCard> {
     String targetAfter,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final persists = undoBarPersists(context);
     final startedOn = ProfileStamp.now();
     final Future<bool> Function() undo;
     final String done;
@@ -180,7 +179,8 @@ class _StrengthCardState extends State<StrengthCard> {
     messenger.removeCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
-        persist: persists,
+        persist: false,
+        duration: undoBarTime,
         content: Text(done),
         action: SnackBarAction(
           label: 'Undo',

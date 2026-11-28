@@ -155,7 +155,8 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
     ).popUntil(namedRouteOrFirst(NavigationOptions.mainRoute));
     messenger.showSnackBar(
       SnackBar(
-        persist: undoBarPersists(messenger.context),
+        persist: false,
+        duration: undoBarTime,
         content: Text('Added $what'),
         action: SnackBarAction(
           label: 'Undo',

@@ -580,7 +580,8 @@ void showGoalUndo(
 
   bar = (messenger..hideCurrentSnackBar()).showSnackBar(
     SnackBar(
-      persist: undoBarPersists(messenger.context),
+      persist: false,
+      duration: undoBarTime,
       content: Text(message),
       action: SnackBarAction(
         label: 'Undo',

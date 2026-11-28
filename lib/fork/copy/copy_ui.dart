@@ -109,7 +109,6 @@ Future<void> placeWithUndo(
   final entries = copier ?? CopyEntries.fromLocator();
   final messenger = ScaffoldMessenger.maybeOf(context);
   final mealName = meal == null ? null : mealLabel(context, meal);
-  final persists = undoBarPersists(context);
   final locale = Localizations.localeOf(context).toLanguageTag();
   final stamp = ProfileStamp.now();
   final placed = place != null
@@ -147,7 +146,8 @@ Future<void> placeWithUndo(
   }
   messenger.showSnackBar(
     SnackBar(
-      persist: persists,
+      persist: false,
+      duration: undoBarTime,
       content: Text(
         '$done${count == 1 ? '' : ' $count foods'}'
         '${to.isEmpty ? '' : ' to ${to.join(', ')}'}',

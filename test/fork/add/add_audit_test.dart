@@ -129,14 +129,14 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('stays up under TalkBack until dismissed', (tester) async {
+    testWidgets('times out under a screen reader too', (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(accessibleNavigation: true);
       addTearDown(
         tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
       );
       await show(tester);
-      expect(find.text('Undo'), findsOneWidget);
+      expect(find.text('Undo'), findsNothing);
     });
 
     testWidgets('times out without a screen reader', (tester) async {

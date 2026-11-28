@@ -6,11 +6,10 @@ import 'package:opennutritracker/core/utils/tracked_day_lock.dart';
 import 'package:opennutritracker/fork/basket/basket_ui.dart';
 import 'package:opennutritracker/fork/copy/copy_entries.dart';
 
-/// Whether an Undo bar stays up until dismissed. Under a screen reader it
-/// does, as reaching Undo takes time (WCAG 2.2.1); otherwise it goes after
-/// its time, so later bars are not held behind it.
-bool undoBarPersists(BuildContext context) =>
-    MediaQuery.accessibleNavigationOf(context);
+/// How long an Undo bar stays up. It always goes, even under a screen reader:
+/// accessibleNavigation also turns on for autofill services, and a bar that
+/// never goes looks stuck.
+const undoBarTime = Duration(seconds: 5);
 
 typedef RestoreIntakes =
     Future<void> Function(
@@ -42,11 +41,8 @@ Future<void> restoreDeletedIntakes(
 /// where the profile changed since, the delete did not happen there or the
 /// entry belongs to another profile, so no bar is shown.
 class DeletedEntries {
-  // Twice the default: a delete is easy to miss undoing.
-  static const _time = Duration(seconds: 8);
-
   /// The bar on screen and what its Undo restores; null once it has gone or
-  /// its time is up, as a bar kept up under TalkBack gathers no later delete.
+  /// its time is up.
   static ({
     ScaffoldFeatureController<SnackBar, SnackBarClosedReason> bar,
     List<IntakeEntity> entries,
@@ -79,8 +75,8 @@ class DeletedEntries {
     final name = entries.length == 1 ? entries.single.meal.name : null;
     bar = messenger.showSnackBar(
       SnackBar(
-        persist: undoBarPersists(messenger.context),
-        duration: _time,
+        persist: false,
+        duration: undoBarTime,
         content: _Gathering(
           onEnd: close,
           child: Text(
@@ -114,8 +110,8 @@ class DeletedEntries {
   }
 }
 
-/// Ends the bar's gathering after its time, even where the bar stays up: the
-/// timer lives with the bar's content, so it goes when the bar does.
+/// Ends the bar's gathering after its time: the timer lives with the bar's
+/// content, so it goes when the bar does.
 class _Gathering extends StatefulWidget {
   final VoidCallback onEnd;
   final Widget child;
@@ -132,7 +128,7 @@ class _GatheringState extends State<_Gathering> {
   @override
   void initState() {
     super.initState();
-    _timer = Timer(DeletedEntries._time, widget.onEnd);
+    _timer = Timer(undoBarTime, widget.onEnd);
   }
 
   @override

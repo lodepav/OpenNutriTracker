@@ -24,6 +24,7 @@ import 'package:opennutritracker/fork/meal_detail/food_page.dart'
     show DayTotals, TodayAfterAdding, loadDayTotals;
 import 'package:opennutritracker/fork/plan/plan_store.dart';
 import 'package:opennutritracker/fork/plan/plan_ui.dart';
+import 'package:opennutritracker/fork/undo/undo_delete.dart';
 import 'package:opennutritracker/fork/units/energy_text.dart';
 
 final _log = Logger('Basket');
@@ -288,6 +289,8 @@ class _BasketSheetState extends State<BasketSheet> {
       ..removeCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
+          persist: false,
+          duration: undoBarTime,
           content: Text(message),
           action: SnackBarAction(label: 'Undo', onPressed: restore),
         ),

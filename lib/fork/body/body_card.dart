@@ -144,7 +144,8 @@ Future<Set<BodyMetric>?> addMeasurements(
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          persist: undoBarPersists(context),
+          persist: false,
+          duration: undoBarTime,
           content: Text(
             only == null
                 ? 'Replaced ${saved.replaced.length} measurements from $day'
@@ -264,7 +265,8 @@ class _BodyMeasurementsCardState extends State<BodyMeasurementsCard> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        persist: undoBarPersists(context),
+        persist: false,
+        duration: undoBarTime,
         content: const Text('Measurement deleted'),
         action: SnackBarAction(
           label: 'Undo',
