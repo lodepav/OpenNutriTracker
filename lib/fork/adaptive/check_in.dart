@@ -228,13 +228,10 @@ CheckIn computeCheckIn(CheckInInputs inputs) {
   final base = hold == null && run.updates > 0
       ? run.estimates.last
       : inputs.previousBaseKcal ?? run.estimates.last;
-  final trend = smoothedTrend(
-    dailyWeights({
-      for (final (i, d) in days.indexed)
-        if (d.weightKg != null) i: d.weightKg!,
-    }, days.length),
-    alpha: inputs.settings.alpha,
-  );
+  final trend = twoSidedTrend({
+    for (final (i, d) in days.indexed)
+      if (d.weightKg != null) i: d.weightKg!,
+  }, days.length);
   final week = days.sublist(max(0, days.length - 7));
   final logged = [
     for (final d in week)

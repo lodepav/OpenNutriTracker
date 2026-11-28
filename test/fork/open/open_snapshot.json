@@ -93,79 +93,79 @@
     },
     "adaptive": {
       "d0": {
-        "kcal": 1731.5,
-        "carbs": 194.79,
-        "fat": 57.72,
-        "protein": 108.22,
+        "kcal": 1732.04,
+        "carbs": 194.85,
+        "fat": 57.73,
+        "protein": 108.25,
         "weekdayShift": 250.0,
         "activityKcal": 0.0,
         "activityCredit": "notCounted",
         "storedGoalMoveFor300": 0.0
       },
       "d-3": {
-        "kcal": 1381.5,
-        "carbs": 155.42,
-        "fat": 46.05,
-        "protein": 86.34
+        "kcal": 1382.04,
+        "carbs": 155.48,
+        "fat": 46.07,
+        "protein": 86.38
       },
-      "rowWrittenTodayFor d-3": 1381.5
+      "rowWrittenTodayFor d-3": 1382.04
     },
     "adaptiveFlat": {
       "d0": {
-        "kcal": 1731.5,
-        "carbs": 194.79,
-        "fat": 57.72,
-        "protein": 108.22,
+        "kcal": 1732.04,
+        "carbs": 194.85,
+        "fat": 57.73,
+        "protein": 108.25,
         "weekdayShift": 250.0,
         "activityKcal": 0.0,
         "activityCredit": "notCounted",
         "storedGoalMoveFor300": 0.0
       },
       "d-3": {
-        "kcal": 1381.5,
-        "carbs": 155.42,
-        "fat": 46.05,
-        "protein": 86.34
+        "kcal": 1382.04,
+        "carbs": 155.48,
+        "fat": 46.07,
+        "protein": 86.38
       },
-      "rowWrittenTodayFor d-3": 1381.5
+      "rowWrittenTodayFor d-3": 1382.04
     },
     "activityWeekly": {
       "d0": {
-        "kcal": 1731.5,
-        "carbs": 194.79,
-        "fat": 57.72,
-        "protein": 108.22,
+        "kcal": 1732.04,
+        "carbs": 194.85,
+        "fat": 57.73,
+        "protein": 108.25,
         "weekdayShift": 250.0,
         "activityKcal": 0.0,
         "activityCredit": "atCheckIn",
         "storedGoalMoveFor300": 0.0
       },
       "d-3": {
-        "kcal": 1381.5,
-        "carbs": 155.42,
-        "fat": 46.05,
-        "protein": 86.34
+        "kcal": 1382.04,
+        "carbs": 155.48,
+        "fat": 46.07,
+        "protein": 86.38
       },
-      "rowWrittenTodayFor d-3": 1381.5
+      "rowWrittenTodayFor d-3": 1382.04
     },
     "activityDaily": {
       "d0": {
-        "kcal": 2531.5,
-        "carbs": 284.79,
-        "fat": 84.38,
-        "protein": 158.22,
+        "kcal": 2532.04,
+        "carbs": 284.85,
+        "fat": 84.4,
+        "protein": 158.25,
         "weekdayShift": 250.0,
         "activityKcal": 800.0,
         "activityCredit": "dailyCapped",
         "storedGoalMoveFor300": 0.0
       },
       "d-3": {
-        "kcal": 1381.5,
-        "carbs": 155.42,
-        "fat": 46.05,
-        "protein": 86.34
+        "kcal": 1382.04,
+        "carbs": 155.48,
+        "fat": 46.07,
+        "protein": 86.38
       },
-      "rowWrittenTodayFor d-3": 1381.5
+      "rowWrittenTodayFor d-3": 1382.04
     },
     "fixed": {
       "d0": {
@@ -284,75 +284,75 @@
     },
     "adaptive": {
       "day": "d0",
-      "goal": 1731.5,
+      "goal": 1732.04,
       "eaten": 936.5,
       "burned": 1250.0,
-      "left": 795.0,
+      "left": 795.54,
       "carbs": {
         "eaten": 139.9,
-        "goal": 194.79
+        "goal": 194.85
       },
       "fat": {
         "eaten": 10.45,
-        "goal": 57.72
+        "goal": 57.73
       },
       "protein": {
         "eaten": 65.1,
-        "goal": 108.22
+        "goal": 108.25
       },
       "meals": {
         "breakfast": {
           "kcal": 285.0,
-          "target": 519.45
+          "target": 519.61
         },
         "lunch": {
           "kcal": 561.5,
-          "target": 692.6
+          "target": 692.82
         },
         "dinner": {
           "kcal": 0.0,
-          "target": 346.3
+          "target": 346.41
         },
         "snack": {
           "kcal": 90.0,
-          "target": 173.15
+          "target": 173.2
         }
       }
     },
     "activityDaily": {
       "day": "d0",
-      "goal": 2531.5,
+      "goal": 2532.04,
       "eaten": 936.5,
       "burned": 1250.0,
-      "left": 1595.0,
+      "left": 1595.54,
       "carbs": {
         "eaten": 139.9,
-        "goal": 284.79
+        "goal": 284.85
       },
       "fat": {
         "eaten": 10.45,
-        "goal": 84.38
+        "goal": 84.4
       },
       "protein": {
         "eaten": 65.1,
-        "goal": 158.22
+        "goal": 158.25
       },
       "meals": {
         "breakfast": {
           "kcal": 285.0,
-          "target": 759.45
+          "target": 759.61
         },
         "lunch": {
           "kcal": 561.5,
-          "target": 1012.6
+          "target": 1012.82
         },
         "dinner": {
           "kcal": 0.0,
-          "target": 506.3
+          "target": 506.41
         },
         "snack": {
           "kcal": 90.0,
-          "target": 253.15
+          "target": 253.2
         }
       }
     },
@@ -745,15 +745,15 @@
   },
   "trends": {
     "weight": {
-      "nowKg": 84.72,
-      "changeKg": -1.23,
-      "perWeekKg": -0.29,
+      "nowKg": 84.24,
+      "changeKg": -1.68,
+      "perWeekKg": -0.39,
       "trendTail": [
-        85.02,
-        84.95,
-        84.87,
-        84.8,
-        84.72
+        84.49,
+        84.43,
+        84.36,
+        84.3,
+        84.24
       ]
     },
     "eaten": {
@@ -955,24 +955,24 @@
       {
         "name": "d-15",
         "expenditureKcal": 2176.48,
-        "proposedKcal": 1695.72,
-        "acceptedKcal": 1695.72,
+        "proposedKcal": 1695.99,
+        "acceptedKcal": 1695.99,
         "baseKcal": 2176.48,
         "basis": "activity=off;flat=false"
       },
       {
         "name": "d-8",
         "expenditureKcal": 2076.89,
-        "proposedKcal": 1596.69,
-        "acceptedKcal": 1596.69,
+        "proposedKcal": 1596.99,
+        "acceptedKcal": 1596.99,
         "baseKcal": 2076.89,
         "basis": "activity=off;flat=false"
       },
       {
         "name": "d-1",
         "expenditureKcal": 1960.95,
-        "proposedKcal": 1481.5,
-        "acceptedKcal": 1481.5,
+        "proposedKcal": 1482.04,
+        "acceptedKcal": 1482.04,
         "baseKcal": 1960.95,
         "basis": "activity=off;flat=false"
       }
@@ -983,16 +983,16 @@
       "averageIntakeKcal": 1483.25,
       "loggedDays": 6,
       "weighIns": 3,
-      "trendKg": 84.72,
-      "weekChangeKg": -0.51,
+      "trendKg": 84.24,
+      "weekChangeKg": -0.44,
       "expenditureKcal": 1945.16,
       "activityKcal": null,
       "baseKcal": 1945.16,
-      "uncappedTargetKcal": 1465.84,
-      "proposedTargetKcal": 1465.84,
-      "daysToTargetAtGoal": 95,
-      "daysToTargetAtTrend": 114,
-      "kcalPerKg": 6710.43,
+      "uncappedTargetKcal": 1466.55,
+      "proposedTargetKcal": 1466.55,
+      "daysToTargetAtGoal": 88,
+      "daysToTargetAtTrend": 103,
+      "kcalPerKg": 6700.52,
       "activityChangeKcal": null,
       "capCalibrating": true,
       "movedWithinCap": false,
@@ -1005,15 +1005,15 @@
       "averageIntakeKcal": 1483.25,
       "loggedDays": 6,
       "weighIns": 3,
-      "trendKg": 84.72,
-      "weekChangeKg": -0.51,
+      "trendKg": 84.24,
+      "weekChangeKg": -0.44,
       "expenditureKcal": 1974.54,
       "activityKcal": null,
       "baseKcal": 1974.54,
       "uncappedTargetKcal": 1424.54,
       "proposedTargetKcal": 1424.54,
-      "daysToTargetAtGoal": 95,
-      "daysToTargetAtTrend": 114,
+      "daysToTargetAtGoal": 88,
+      "daysToTargetAtTrend": 103,
       "kcalPerKg": 7700.0,
       "activityChangeKcal": null,
       "capCalibrating": true,
@@ -1027,16 +1027,16 @@
       "averageIntakeKcal": 1483.25,
       "loggedDays": 6,
       "weighIns": 3,
-      "trendKg": 84.72,
-      "weekChangeKg": -0.51,
+      "trendKg": 84.24,
+      "weekChangeKg": -0.44,
       "expenditureKcal": 2000.14,
       "activityKcal": 120.0,
       "baseKcal": 1880.14,
-      "uncappedTargetKcal": 1520.82,
-      "proposedTargetKcal": 1520.82,
-      "daysToTargetAtGoal": 95,
-      "daysToTargetAtTrend": 114,
-      "kcalPerKg": 6710.43,
+      "uncappedTargetKcal": 1521.53,
+      "proposedTargetKcal": 1521.53,
+      "daysToTargetAtGoal": 88,
+      "daysToTargetAtTrend": 103,
+      "kcalPerKg": 6700.52,
       "activityChangeKcal": null,
       "capCalibrating": true,
       "movedWithinCap": false,
@@ -1049,16 +1049,16 @@
       "averageIntakeKcal": 1483.25,
       "loggedDays": 6,
       "weighIns": 3,
-      "trendKg": 84.72,
-      "weekChangeKg": -0.51,
+      "trendKg": 84.24,
+      "weekChangeKg": -0.44,
       "expenditureKcal": 2000.14,
       "activityKcal": 120.0,
       "baseKcal": 1880.14,
-      "uncappedTargetKcal": 1400.82,
-      "proposedTargetKcal": 1400.82,
-      "daysToTargetAtGoal": 95,
-      "daysToTargetAtTrend": 114,
-      "kcalPerKg": 6710.43,
+      "uncappedTargetKcal": 1401.53,
+      "proposedTargetKcal": 1401.53,
+      "daysToTargetAtGoal": 88,
+      "daysToTargetAtTrend": 103,
+      "kcalPerKg": 6700.52,
       "activityChangeKcal": null,
       "capCalibrating": true,
       "movedWithinCap": false,
@@ -1071,16 +1071,16 @@
       "averageIntakeKcal": 1619.67,
       "loggedDays": 3,
       "weighIns": 3,
-      "trendKg": 85.9,
-      "weekChangeKg": 0.05,
+      "trendKg": 85.86,
+      "weekChangeKg": 0.0,
       "expenditureKcal": 2176.48,
       "activityKcal": null,
       "baseKcal": 2176.48,
-      "uncappedTargetKcal": 1695.43,
-      "proposedTargetKcal": 1695.43,
+      "uncappedTargetKcal": 1695.49,
+      "proposedTargetKcal": 1695.49,
       "daysToTargetAtGoal": 111,
       "daysToTargetAtTrend": null,
-      "kcalPerKg": 6734.69,
+      "kcalPerKg": 6733.83,
       "activityChangeKcal": null,
       "capCalibrating": true,
       "movedWithinCap": false,
@@ -1171,8 +1171,8 @@
         "last": "d0",
         "running": true,
         "length": 1,
-        "startKg": 84.72,
-        "endKg": 84.72,
+        "startKg": 84.24,
+        "endKg": 84.24,
         "changeKg": 0.0,
         "kgPerWeek": null,
         "plannedKg": 0.0,
@@ -1191,9 +1191,9 @@
         "last": "d-1",
         "running": false,
         "length": 7,
-        "startKg": 85.22,
-        "endKg": 84.8,
-        "changeKg": -0.43,
+        "startKg": 84.68,
+        "endKg": 84.3,
+        "changeKg": -0.38,
         "kgPerWeek": null,
         "plannedKg": 0.0,
         "eatenKcal": 1565.83,
@@ -1211,10 +1211,10 @@
         "last": "d-8",
         "running": false,
         "length": 21,
-        "startKg": 85.88,
-        "endKg": 85.29,
-        "changeKg": -0.58,
-        "kgPerWeek": -0.2,
+        "startKg": 85.83,
+        "endKg": 84.74,
+        "changeKg": -1.09,
+        "kgPerWeek": -0.38,
         "plannedKg": -1.43,
         "eatenKcal": 1604.5,
         "days": {
@@ -1260,25 +1260,25 @@
       "paceKgPerWeek": -0.5,
       "planDay": "d-28"
     },
-    "nowKg": 84.72,
+    "nowKg": 84.24,
     "totalKg": -7.5,
-    "toGoKg": -6.72,
-    "fraction": 0.1,
+    "toGoKg": -6.24,
+    "fraction": 0.17,
     "daysIn": 28,
     "planKgToday": 83.5,
     "planFraction": 0.27,
-    "behindKg": 1.22,
+    "behindKg": 0.74,
     "recentPace": {
-      "kgPerWeek": -0.29,
+      "kgPerWeek": -0.39,
       "days": 30
     },
-    "sinceStartKgPerWeek": -0.2,
-    "arrivalAtPace": "d+95",
+    "sinceStartKgPerWeek": -0.32,
+    "arrivalAtPace": "d+88",
     "expenditureKcal": 1945.16,
-    "leftKg": 6.72,
+    "leftKg": 6.24,
     "retargetedTo76": {
       "day": "d0",
-      "kg": 84.72,
+      "kg": 84.24,
       "planDay": "d0"
     }
   },
@@ -1299,7 +1299,7 @@
   "reminders": {
     "weighInTime": "07:30",
     "checkInTime": "09:00",
-    "checkInMessage": "Expenditure 1,945 kcal, new target 1,466 kcal, −16. Open OpenBite to confirm it.",
+    "checkInMessage": "Expenditure 1,945 kcal, new target 1,467 kcal, −15. Open OpenBite to confirm it.",
     "planned": [
       {
         "name": "weighIn",
@@ -1311,7 +1311,7 @@
         "name": "checkIn",
         "at": "d+6 09:00",
         "repeatsDaily": false,
-        "body": "Expenditure 1,945 kcal, new target 1,466 kcal, −16. Open OpenBite to confirm it."
+        "body": "Expenditure 1,945 kcal, new target 1,467 kcal, −15. Open OpenBite to confirm it."
       }
     ]
   }

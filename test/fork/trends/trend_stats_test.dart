@@ -3,7 +3,6 @@ import 'package:opennutritracker/core/domain/entity/body_weight_unit_entity.dart
 import 'package:opennutritracker/core/domain/entity/tracked_day_entity.dart';
 import 'package:opennutritracker/core/domain/entity/weight_log_entity.dart';
 import 'package:opennutritracker/fork/adaptive/adaptive_service.dart';
-import 'package:opennutritracker/fork/adaptive/expenditure.dart';
 import 'package:opennutritracker/fork/adaptive/goal_plan.dart';
 import 'package:opennutritracker/fork/adaptive/trend.dart';
 import 'package:opennutritracker/fork/trends/trend_stats.dart';
@@ -165,10 +164,7 @@ void main() {
         WeightLogEntity(date: _d(d - (span - 1)), weightKg: kg),
     ];
     final stats = WeightTrendStats.of(entries, week);
-    final planner = smoothedTrend(
-      dailyWeights(weighIns, span),
-      alpha: const ExpenditureSettings().alpha,
-    ).whereType<double>().toList();
+    final planner = twoSidedTrend(weighIns, span).whereType<double>().toList();
     expect(stats.perWeekKg, closeTo(trendChanges(planner)[7]!, 1e-9));
     expect(stats.nowKg, closeTo(planner.last, 1e-9));
     expect(stats.changeKg, closeTo(stats.perWeekKg!, 1e-9));
